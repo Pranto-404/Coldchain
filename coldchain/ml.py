@@ -1,11 +1,12 @@
 """Trained RandomForest 30-min forecast on SYNTHETIC thermal scenarios; field validation required."""
 from pathlib import Path
-import os
+import os,threading
 import numpy as np
 BASE=Path(__file__).resolve().parents[1]
 MODEL=BASE/'models'/'forecast.joblib'
 FEATURES=['temp_c','slope_c_per_min','mean_c','std_c','door_open','mains_ok','compressor_on','compressor_duty']
 _cached=None
+_load_lock=threading.Lock()
 
 def feature_vector(rows):
     if not rows: return None
@@ -19,15 +20,22 @@ def feature_vector(rows):
     slope=float((temps[-1]-temps[0])/mins)
     return [float(last['temp_c']),float(np.clip(slope,-1.5,1.5)),float(temps.mean()),float(temps.std()),int(last['door_open']),int(last['mains_ok']),int(last['compressor_on']),float(np.mean([int(x['compressor_on']) for x in seq]))]
 
-def predict(rows):
+def load_model():
+    """Import scikit-learn and load the forest once. Called from a background thread at start-up,
+    because the import alone takes tens of seconds on a small cloud instance."""
     global _cached
+    with _load_lock:
+        if _cached is None and MODEL.exists():
+            try:
+                import joblib
+                _cached=joblib.load(MODEL)
+            except Exception:pass
+    return _cached
+
+def predict(rows):
     fv=feature_vector(rows)
     if not fv:return {'predicted_c':None,'warning':False,'method':'insufficient data'}
-    if _cached is None and MODEL.exists():
-        try:
-            import joblib
-            _cached=joblib.load(MODEL)
-        except Exception:pass
+    load_model()
     if _cached is not None:
         predicted=float(_cached.predict([fv])[0]); method='RandomForest / synthetic-training'
     else:

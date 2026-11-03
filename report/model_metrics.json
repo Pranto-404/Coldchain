@@ -17,26 +17,26 @@
     "compressor_duty"
   ],
   "horizon_minutes": 30,
-  "mean_absolute_error_c": 1.509,
-  "root_mean_squared_error_c": 1.93,
-  "breach_precision": 0.853,
-  "breach_recall": 0.867,
-  "breach_f1": 0.86,
+  "mean_absolute_error_c": 1.478,
+  "root_mean_squared_error_c": 1.873,
+  "breach_precision": 0.866,
+  "breach_recall": 0.87,
+  "breach_f1": 0.868,
   "breach_confusion_matrix_tn_fp_fn_tp": [
-    1089,
-    209,
-    186,
-    1211
+    1110,
+    188,
+    181,
+    1216
   ],
   "feature_importances": {
-    "temp_c": 0.7608,
-    "slope_c_per_min": 0.1152,
-    "mean_c": 0.0269,
-    "std_c": 0.0496,
-    "door_open": 0.0104,
-    "mains_ok": 0.0159,
-    "compressor_on": 0.0007,
-    "compressor_duty": 0.0205
+    "temp_c": 0.8152,
+    "slope_c_per_min": 0.1005,
+    "mean_c": 0.01,
+    "std_c": 0.0285,
+    "door_open": 0.0082,
+    "mains_ok": 0.0166,
+    "compressor_on": 0.0003,
+    "compressor_duty": 0.0207
   },
   "limitations": [
     "Synthetic-only data distribution",

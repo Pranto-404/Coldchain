@@ -154,7 +154,7 @@ for i,(label,value) in enumerate(metrics):
 img=str(ROOT/'report'/'forecast_validation.png')
 c.drawImage(ImageReader(img),50,252,width=493,height=302,mask='auto',preserveAspectRatio=True,anchor='c')
 txt(43,231,'RESULTS / SYNTHETIC TEST ONLY',8,TEAL,'DVB')
-para(43,219,'220 independently seeded trajectories; 171 for training and 49 for testing. RandomForest, 75 trees, eight input features (current temperature, trend, mean, standard deviation, door, mains, compressor state and compressor duty). Prediction breach classifier: precision 85.3%; recall 86.7%; F1 86.0%.',507,9,INK,14)
+para(43,219,'220 independently seeded trajectories; 171 for training and 49 for testing. RandomForest, 30 trees (depth 10), eight input features (current temperature, trend, mean, standard deviation, door, mains, compressor state and compressor duty). Prediction breach classifier: precision 86.6%; recall 87.0%; F1 86.8%.',507,9,INK,14)
 rect(43,74,509,67,HexColor('#fff7ec'),r=9)
 para(58,128,'<b>Important:</b> The metrics are obtained solely from a reproducible <b>synthetic simulator</b>. No real medical fridge holdout or deployment testing was done. An engineering-rule fallback is labeled separately if the model is unavailable.',472,8.5,INK,13)
 c.showPage()

@@ -16,15 +16,15 @@ Generated with `train_model.py` using a seeded thermal simulation (`SEED=2026102
 8. `compressor_duty`: fraction of recent observations with motor energized.
 
 ## Model
-Scikit-learn `RandomForestRegressor` with 75 trees, maximum depth 16, minimum leaf size 3, `random_state=20261021`. No future samples enter the features. Alert when the predicted temperature **exceeds 8°C**; model is advisory.
+Scikit-learn `RandomForestRegressor` with 30 trees, maximum depth 10, minimum leaf size 10 (smaller and slightly more accurate than the earlier 75-tree model; loads quickly on a small server), `random_state=20261021`. No future samples enter the features. Alert when the predicted temperature **exceeds 8°C**; model is advisory.
 
 ## Holdout results (synthetic-only)
 See source file `report/model_metrics.json` and figure `report/forecast_validation.png`. Values come from executing the training script, not estimates:
 
-- Test MAE: **1.509°C**.
-- Test RMSE: **1.930°C**.
-- Forecast breach classification (`>8°C`): precision **0.853**, recall **0.867**, F1 **0.860**.
-- Confusion matrix: TN **1089**, FP **209**, FN **186**, TP **1211**.
+- Test MAE: **1.478°C**.
+- Test RMSE: **1.873°C**.
+- Forecast breach classification (`>8°C`): precision **0.866**, recall **0.870**, F1 **0.868**.
+- Confusion matrix: TN **1110**, FP **188**, FN **181**, TP **1216**.
 
 ## Required next validation
 - Acquire at least several actual fridge temperature traces with ground-truth calibrated sensors, door, power and compressor operation, with storage-unit/device holdout.

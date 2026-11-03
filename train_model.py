@@ -43,7 +43,7 @@ def main():
             X.append(row_features(seq[i-5:i+1]));y.append(seq[i+30]['temp_c']);groups.append(trajectory)
     X=np.asarray(X);y=np.asarray(y);groups=np.asarray(groups)
     tr,te=next(GroupShuffleSplit(n_splits=1,test_size=.22,random_state=SEED).split(X,y,groups))
-    reg=RandomForestRegressor(n_estimators=75,max_depth=16,min_samples_leaf=3,n_jobs=-1,random_state=SEED)
+    reg=RandomForestRegressor(n_estimators=30,max_depth=10,min_samples_leaf=10,n_jobs=-1,random_state=SEED)
     reg.fit(X[tr],y[tr]);pred=reg.predict(X[te]);actual_breach=y[te]>8;pred_breach=pred>8
     metrics={
       'data_provenance':'SYNTHETIC PHYSICS SIMULATION ONLY; NOT CLINICALLY VALIDATED',

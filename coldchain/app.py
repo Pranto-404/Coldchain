@@ -80,6 +80,8 @@ simulator_service=None
 async def lifespan(app):
     global mqtt_service,simulator_service
     jwt_secret()
+    from .ml import load_model
+    threading.Thread(target=load_model,name='model-warmup',daemon=True).start()
     if os.getenv('DEMO_MODE')!='1':
         for x in ('DEVICE_FRIDGE_A_SECRET','DEVICE_FRIDGE_B_SECRET'):
             if len(os.getenv(x,''))<32:raise RuntimeError(f'{x} must have 32+ characters')
@@ -461,7 +463,7 @@ AI_DATASET={
     'disturbances':['Power cuts of 10-55 min','Door openings of 9-50 min','Compressor weakening to 40-82% strength','Ambient 18-32°C, random insulation and cooling capacity'],
     'target':'Fridge temperature exactly 30 minutes after the feature window',
     'split':'GroupShuffleSplit by trajectory (no leakage between train and test runs)',
-    'model':'RandomForestRegressor (75 trees, depth 16)',
+    'model':'RandomForestRegressor (30 trees, depth 10)',
     'feature_help':{
         'temp_c':'Latest temperature','slope_c_per_min':'Warming/cooling speed over the last 5 minutes',
         'mean_c':'Average over 5 minutes','std_c':'Temperature variability','door_open':'Door currently open',
