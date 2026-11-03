@@ -1,4 +1,5 @@
 """Generate polished competition report from actual source files / metrics. No fabricated hardware results."""
+import os
 from pathlib import Path
 import json,math
 from reportlab.pdfgen import canvas
@@ -18,6 +19,8 @@ PAGE_W,PAGE_H=595.28,841.89
 DARK=HexColor('#103044');NAVY=HexColor('#0a283a');TEAL=HexColor('#059786');MINT=HexColor('#e5f6f1');INK=HexColor('#233c4c');MUTED=HexColor('#758e9b');LIGHT=HexColor('#e9eff2');BG=HexColor('#f6f9fa');GOLD=HexColor('#dc9950');RED=HexColor('#cf5c63')
 
 reg='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';bold='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+if not os.path.exists(reg):  # Windows: fall back to Arial, which also covers the degree sign
+    reg='C:/Windows/Fonts/arial.ttf';bold='C:/Windows/Fonts/arialbd.ttf'
 pdfmetrics.registerFont(TTFont('DV',reg));pdfmetrics.registerFont(TTFont('DVB',bold))
 
 c=canvas.Canvas(str(OUT),pagesize=(PAGE_W,PAGE_H),pageCompression=1)
