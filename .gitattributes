@@ -1,0 +1,13 @@
+# Normalise line endings in the repo; keep Windows scripts as CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.joblib binary
+*.pdf binary
+
+# Language statistics: the Vercel folder is a copy of web/, the PDF report is generated.
+vercel-frontend/** linguist-vendored
+report/** linguist-generated
+*.ino linguist-language=C++

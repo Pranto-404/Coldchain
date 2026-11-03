@@ -1,181 +1,238 @@
-# COLDCHAIN V12
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img alt="ColdChain" src="docs/assets/logo-light.svg" width="440">
+  </picture>
+</p>
 
-**Live demo:** https://coldchain-monitor-30qu.onrender.com — create an account or enter as a demo role, switch dark/light mode, and operate the ESP32 node by hand on the **Hardware** page. See `docs/V12_CHANGES.md` (then `V11_CHANGES.md`, `V10_CHANGES.md`). 41 tests passing.
+<p align="center">
+  <b>IoT cold-chain monitor for vaccines and insulin.</b><br>
+  ESP32 fridge nodes · heat-exposure budgets · signed telemetry · tamper-evident logs · 30-minute breach forecast
+</p>
+
+<p align="center">
+  <a href="https://coldchain-monitor-30qu.onrender.com"><img alt="Live demo" src="https://img.shields.io/badge/live_demo-online-3fd6c2?style=for-the-badge&logo=render&logoColor=white"></a>
+  <a href="https://github.com/Pranto-404/Coldchain/actions/workflows/tests.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/Pranto-404/Coldchain/tests.yml?branch=main&label=tests&style=for-the-badge&logo=githubactions&logoColor=white"></a>
+  <a href="https://github.com/Pranto-404/Coldchain/tags"><img alt="Version" src="https://img.shields.io/github/v/tag/Pranto-404/Coldchain?label=version&style=for-the-badge&color=7aa7ff"></a>
+</p>
+
+<p align="center">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white">
+  <img alt="ESP32" src="https://img.shields.io/badge/ESP32-Arduino-E7352C?logo=espressif&logoColor=white">
+  <img alt="MQTT" src="https://img.shields.io/badge/MQTT-Mosquitto-660066?logo=eclipsemosquitto&logoColor=white">
+  <img alt="scikit-learn" src="https://img.shields.io/badge/scikit--learn-RandomForest-F7931E?logo=scikitlearn&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-hash_chain-003B57?logo=sqlite&logoColor=white">
+</p>
+
+<p align="center">
+  <a href="#-try-it">Try it</a> ·
+  <a href="#-what-it-does">Features</a> ·
+  <a href="#-screenshots">Screenshots</a> ·
+  <a href="#-architecture">Architecture</a> ·
+  <a href="#-how-it-works">How it works</a> ·
+  <a href="#-run-it-yourself">Run it</a> ·
+  <a href="#-project-layout">Layout</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/overview-light.jpg">
+    <img alt="ColdChain overview: two fridge nodes with temperature dials, OLED mirrors, charts and a 30-minute forecast" src="docs/screenshots/overview-dark.jpg" width="100%">
+  </picture>
+</p>
 
 ---
 
-# COLDCHAIN V10 — WHAT'S NEW
+Vaccines and insulin lose potency outside **2–8 °C**, and the damage is invisible. ColdChain watches every
+fridge, counts how long each batch has spent too warm, keeps the compressor cycling, survives power and
+Wi-Fi loss, and warns half an hour **before** a breach — with an audit trail nobody can quietly edit.
 
-V10 fixes 14 bugs found in a full audit of V9 and rebuilds the web UI: digital-twin fridge cards (OLED, LEDs, compressor), an interactive chart with the AI +30 min forecast, a notification center, an AI insights page with the model report, live attack/tamper demos, user management, inventory search/edit/dispose, one-click lab scenarios and a phone-first public QR page. **See `docs/V10_CHANGES.md`** for the bug table, the feature list and a 3-minute demo path. Tests: 36 passed.
+Built for **FastRoboX 1.0** (IoT cold-chain challenge, Round 1).
 
----
+## ⚡ Try it
 
-# COLDCHAIN — FASTROBOX ONSITE READY PACKAGE V8
+**Live:** **https://coldchain-monitor-30qu.onrender.com** — free hosting sleeps when idle; the first visit can take ~50 s while it wakes.
 
-**This is the complete extracted-project package** containing the original Round-1 web/AI simulator, the real-ESP32 hardware backend, two board-profile generator, firmware, a Windows control-menu, and preparation/diagnostic tools. The official question tasks are covered in software/reference code, but real ESP32 compatibility is **unverified until the organizer kit is available**. The model was evaluated on synthetic data; it is not a clinical device.
+| Enter as | What you can do |
+|---|---|
+| **Admin** | Everything: approve users, reset discard latches, run the tamper test |
+| **Pharmacist** | Add / edit / move stock, confirm relocations, operate the simulated hardware |
+| **Inspector** | Read-only: telemetry, audit log, integrity check |
 
-**START HERE (Windows 10/11):** double-click **`00_START_COLDCHAIN_WINDOWS.bat`**. Read **`00_READ_ME_FIRST_BANGLA.txt`** and **`docs/DO_THIS_BEFORE_HACKATHON.md`**.
+Click a role on the sign-in page, or **create an account** — new accounts are read-only until an Admin approves Pharmacist access.
 
-Before event, select menu option 1 to initialize Python, 2 for tests, 3 to download ESP32 compiler/libraries and official Mosquitto installer, 4 to create private A/B profiles, 6 to compile for classic ESP32, and P to save a hardware-readiness report. Onsite, select 5 if Wi-Fi changes (no secret rotation), 7 to compile and flash A or B after confirming actual COM port and board model, 8 to start the broker, 9 to start hardware backend, and L to verify live readings. Physical wiring, OLED, power failure, relay, buzzer and offline testing must be performed with the organizer kit.
+Things to try: open the **Hardware** page and click the fridge door · drag the probe-temperature slider past 8 °C ·
+on **Security**, fire a replay attack, then *Tamper a reading* and press *Verify integrity* · toggle dark/light with <kbd>T</kbd>.
 
-**Important:** a fresh download does not contain official Arduino/Mosquitto Windows executables or your private credentials. First-time setup must be completed at home with Internet. A board supplied as ESP32-C3/S3, a different temperature probe, or different pinouts will require adaptation. Do not wire mains compressors to the reference circuit.
+> The online demo runs two software twins of the ESP32 nodes. Data is simulated and resets when the server restarts.
 
----
+## ✨ What it does
 
-# HARDWARE-READY ONSITE KIT — READ THIS FIRST
+| Challenge task | What ColdChain does |
+|---|---|
+| **1 · Fridge node** | ESP32 + DS18B20, door reed switch, compressor relay, red/green LEDs, buzzer, SSD1306 OLED showing *Safe / Warning / Breach*. MQTT every 5 s **and** immediately on a door change. Thermostat **on ≥ 7 °C, off ≤ 3 °C, 60 s minimum off-time**. |
+| **2 · Heat-exposure budget** | 60 weighted minutes above 8 °C per batch; minutes above 12 °C count **double**. Under 20 % → *At risk*; 0 % → *Discard* with the red LED **latched until an Admin resets it**. Budget follows the batch when it moves. |
+| **3 · Power & offline** | Mains-fail button reports battery mode and level. Readings queue in flash (LittleFS, 900 samples ≈ 75 min) and replay **in order, without duplicates**. Door open > 60 s → buzzer + Telegram/email alert. |
+| **4 · Web application** | JWT + bcrypt with Admin / Pharmacist / Inspector, enforced on the server. Live dashboard, inventory with moves, public **QR check** page, HMAC-SHA256 + timestamp + nonce with logged rejections, **SHA-256 hash chain** with *Verify integrity*. |
+| **5 · AI prediction & relocation** | Random-forest forecast of the temperature **30 minutes ahead**, compressor **health 0–100**, suggestions of **which batches to move and where**, one-click confirmation, and a model report (dataset, features, results). |
 
-**Preparation permission confirmed:** The user reported the event permits bringing previously written software/firmware. This package extends the Round 1 V6 project with an onsite workflow for the two *actual* ESP32 nodes, without claiming any physical test has occurred.
+Plus: interactive hardware view you can operate by hand, dark and light themes, account sign-up with approval,
+notification centre, CSV export, keyboard shortcuts and a phone-friendly layout.
 
-**Two independent launch paths:**
+## 📸 Screenshots
 
-- **Round 1 software simulation:** `START_DEMO_WINDOWS.bat` — uses clearly labeled synthetic sensor data and demo accounts.
-- **Hackathon physical prototype:** `PREPARE_HARDWARE_WINDOWS.bat` (once to generate private credentials and two board sketches), then `START_BROKER_WINDOWS.bat`, `CHECK_HARDWARE_WINDOWS.bat`, and `START_HARDWARE_WINDOWS.bat`. Verify both boards with `CHECK_LIVE_TELEMETRY_WINDOWS.bat`. Optional compile: `CHECK_ESP32_COMPILE_WINDOWS.bat` after Arduino CLI + packages are installed.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/hardware-dark.jpg" alt="Hardware page: ESP32 wired to the fridge with live wires, OLED, relay and MQTT packets"><br><sub><b>Hardware</b> — the ESP32 node, wired up and operable by hand</sub></td>
+    <td width="50%"><img src="docs/screenshots/front-light.jpg" alt="Front page with sign in and create account"><br><sub><b>Front page</b> — sign in, create an account, or enter as a demo role</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/forecast-light.jpg" alt="Forecast page with predicted temperature and compressor health"><br><sub><b>Forecast</b> — now vs +30 min, compressor health, model report</sub></td>
+    <td><img src="docs/screenshots/security-dark.jpg" alt="Security page with hash chain and blocked replay attack"><br><sub><b>Security</b> — blocked replay, hash-chain verification</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/inventory-light.jpg" alt="Inventory with heat budget bars"><br><sub><b>Inventory</b> — heat budget, expiry, QR, move / edit / dispose</sub></td>
+    <td><img src="docs/screenshots/front-dark.jpg" alt="Front page in dark mode"><br><sub><b>Dark mode</b> — every screen has both themes</sub></td>
+  </tr>
+</table>
 
-**Read `ONSITE_START_HERE.txt` and `docs/ONSITE_DAY_GUIDE.md`.** The hardware steps require a trusted LAN, actual kit parts, the Arduino toolchain and locally installed Mosquitto; they are **not** fully automatic or physically verified. Generated `.env`, `firmware/ColdChain_A/secrets.h`, `firmware/ColdChain_B/secrets.h` and `ONSITE_PRIVATE_CREDENTIALS.txt` must stay private. Never use a hobby relay to switch mains/refrigeration power, or claim this prototype is fit for clinical vaccine storage.
+<p align="center">
+  <img src="docs/screenshots/mobile-front-dark.jpg" width="24%" alt="Phone: sign in">
+  <img src="docs/screenshots/mobile-overview-dark.jpg" width="24%" alt="Phone: overview">
+  <img src="docs/screenshots/mobile-hardware-dark.jpg" width="24%" alt="Phone: manual hardware control">
+</p>
 
-**Testing:** the existing 17 Round 1/backend tests plus 3 new offline setup tests passed locally (20/20). Windows BAT execution, firmware compilation and actual two-device MQTT/OLED/relay tests remain **pending** until hardware and a Windows test machine are available.
+## 🧭 Architecture
 
----
-
-# COLDCHAIN — Vaccine & Medicine Storage Monitor
-
-**FastRoboX Round 1 software-only demo edition:** start with `ROUND1_START_HERE.txt` and `docs/ROUND1_VIDEO_3MIN_GUIDE.md`. The Simulation Lab contains one-click **synthetic** exposure and forecast scenes for a video covering Questions 2, 4, and 5. All figures must be described as simulated, not clinical measurements.
-
-**Round 1 · IoT + security + predictive analytics · 100-point task coverage**
-
-A runnable **two-fridge cold-chain system** with a carefully styled responsive web dashboard, FastAPI backend, SQLite evidence trail, authenticated MQTT ingestion, independently operating ESP32 firmware, inventory/QR workflows, thermal-budget engine, compressor health score, and model-backed 30-minute breach forecasts. A clearly labeled **synthetic twin** allows full software demonstrations without pretending physical boards were operated.
-
-> **Scope and safety:** This is a competition prototype, **not a certified vaccine storage product**. ESP32 boards, actual refrigeration equipment, battery status calibration, internet-delivered alerts, and clinical decisions must be verified independently. A 100/100 grade cannot be promised; see `docs/REQUIREMENTS_MATRIX.md` and `docs/VALIDATION.md` for what is verified vs pending.
-
-## 1. Windows ONE-CLICK START (no manual Python installation)
-
-**Full ready-to-run v3 (2026-10-21):** unzip the contents, double-click `START_DEMO_WINDOWS.bat`. No separate patch or file copying is necessary. If Python 3.11/3.12 is missing, the launcher downloads the official signed user-level installer, creates `.venv`, installs the listed packages, verifies them from a standalone Python file (avoids PowerShell argument-quoting pitfalls), starts the local server, probes `/health`, and opens your browser. First setup requires Internet. Keep the command window open while you use the application. This is a software simulation, not validated clinical equipment.
-
-**Launcher hotfix (21 October 2026):** Fixed a Windows PowerShell 5.1 quoting bug which incorrectly stripped quotation marks from the Python dependency-check command and triggered `SyntaxError: ( was never closed` after dependencies installed. Dependency verification now runs from `VERIFY_DEPENDENCIES.py`. Existing valid `.venv` packages are detected and reused (no repeated download).
-
-1. **Extract the entire ZIP** into a normal writable folder. Do not run `.bat` directly inside a ZIP archive.
-2. **Double-click `START_DEMO_WINDOWS.bat`.** Keep the black terminal window open.
-3. The launcher automatically **finds Python 3.11/3.12 (64-bit)** or downloads the official digitally signed **Python 3.11.9** installer from `python.org`, installs Python for the current Windows user (no admin rights), creates `.venv`, installs all packages from `requirements.txt`, verifies dependencies and starts the backend.
-4. Once the server passes the health check, the BAT **opens your browser automatically** at the local dashboard (usually **http://127.0.0.1:8000**; an alternative port is selected when needed).
-5. Sign in as `admin` / `ColdChainDemo_Admin2026!` to explore two virtual fridges, readings, heat budgets, batches, forecasting, QR codes and audit verification. Close the console / press `Ctrl+C` to stop the demo.
-
-**Important:** Internet is required for the **first launch when Python or pip packages need installation**; further launches reuse the local environment and typically need no download. Windows 10/11 (64-bit) is recommended, with sufficient storage and access to `python.org` and PyPI. If Windows security policy blocks downloading/installing programs, the BAT reports the error rather than claiming success. Installation and application output are kept in `logs/Windows_Setup.log` to aid diagnosis. The installer validates the official Python download's Windows Authenticode signature before running it. No admin rights or Docker/Mosquitto/Arduino installation is required for the simulated web demo. **Do not run this demonstration against real medical refrigerators.**
-
-To automatically install dependencies and run the tests without opening the dashboard, double-click **`RUN_TESTS_WINDOWS.bat`**.
-
-### Optional command-line start (if Python is already installed)
-
-```powershell
-py -3.11 -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe run_demo.py
+```mermaid
+flowchart LR
+  subgraph NODE["ESP32 fridge node  ×2"]
+    T[DS18B20 probe] --> E((ESP32))
+    D[Door reed switch] --> E
+    P[Mains-fail button] --> E
+    E --> R[Relay → compressor]
+    E --> O[OLED · LEDs · buzzer]
+    E <--> Q[(LittleFS queue)]
+  end
+  E -- "MQTT · HMAC-SHA256 · nonce · seq" --> M[Mosquitto broker]
+  M --> A[FastAPI backend]
+  A -- "signed ACK · discard latch" --> M
+  A --> DB[(SQLite + SHA-256 hash chain)]
+  A --> ML[Forecast · compressor health · relocation]
+  A --> AL[Telegram / email alerts]
+  A <--> W[Web app · dashboard · public QR check]
 ```
 
-**Local demo accounts:**
+The node keeps working on its own: the thermostat, alarms and LEDs run on the ESP32 even when the
+server or Wi-Fi is gone. The backend verifies every packet before it reaches the database.
 
-| Role | Username | Password |
-|---|---|---|
-| Admin | `admin` | `ColdChainDemo_Admin2026!` |
-| Pharmacist | `pharmacist` | `ColdChainDemo_Pharmacist2026!` |
-| Inspector | `inspector` | `ColdChainDemo_Inspector2026!` |
+## 🔬 How it works
 
-These are deliberately public DEMO credentials. **Do not expose this instance to the internet** or put real medical data into it. For any non-demo deployment, disable demo mode and replace all defaults in a private `.env` file.
+<details>
+<summary><b>Heat-exposure budget</b></summary>
 
-## 2. Explore the web application
+Each accepted reading adds `Δt × weight` to every batch in that fridge while the previous sample was above
+8 °C, with `weight = 2` above 12 °C. A batch has 3 600 weighted seconds. Gaps longer than 90 s are logged
+and **not** filled with invented exposure. Status: *Safe* → *At risk* (< 20 % left) → *Discard* (0 %, latched).
+</details>
 
-**Overview:** live two-device cards (temperature, door, mains, compressor, battery), interactive temperature trace, 30-minute forecasts, cooling-health indicators, latest events, and relocation suggestions. Refresh every five seconds.
+<details>
+<summary><b>Device security</b></summary>
 
-**Inventory:** add batches, view lot number, remaining heat budget, expiration, status, and public QR; move eligible stock between units with server-side validation. Heat exposure is **never reset by moving** the batch.
+The ESP32 signs `device|seq|observed_at|temp_c_100|door|mains|compressor|battery|sent_at|nonce` with a
+per-device key (HMAC-SHA256). The server rejects packets with a bad signature, a timestamp outside ±120 s,
+a reused nonce, an unknown device, an out-of-order sequence, or a reused sequence number with different
+data — and logs every rejection. Identical retries are acknowledged once, so offline replay never creates duplicates.
+</details>
 
-**Security & audit:** inspect the linked SHA-256 audit trail, verify hash integrity against stored sensor records, and export reading history as CSV. Device telemetry requires a valid HMAC, fresh sending time, nonce, and authorized device ID; identical retransmissions are deduplicated.
+<details>
+<summary><b>Tamper-evident log</b></summary>
 
-**Simulation lab:** Admin/Pharmacist only. Toggle door open, power loss, artificially degraded compressor, Wi-Fi loss/recovery, and thermal load. Lab controls operate only when `DEMO_MODE=1`, never against physical devices.
+Every event stores `sha256(previous_hash | time | actor | action | data)`. Sensor readings are also compared
+with their chained copy, so editing a stored temperature breaks *Verify integrity* at the exact record.
+</details>
 
-**Inspector role:** read-only access to operational dashboard, stock list, and verification; cannot add/move/reset products, manage users, or operate simulations. Server rejects forbidden write attempts.
+<details>
+<summary><b>Forecast and compressor health</b></summary>
 
-## 3. Ten-minute demonstration
+Features from the last 5 minutes: temperature, slope, mean, spread, door, mains, compressor state and duty.
+A random forest (30 trees, depth 10) trained on 220 simulated fridge runs with power cuts, door openings and
+weakening compressors, split by run so test runs are unseen:
 
-1. Sign in as Admin. Open Overview: **two distinct synthetic ESP32 twins** and their temperature history appear.
-2. Open Inventory and show lot/expiry/exposure; click `QR` and open the public page in another tab **without login**.
-3. In Simulation lab, hold door open **over 60 seconds**. Observe local-demo event/alert record. Actual Telegram/email delivery requires channel settings below.
-4. Toggle main power off for Fridge Alpha. Its telemetry continues reporting `mains_ok=false` and simulated battery level. Re-enable mains.
-5. Toggle Wi-Fi off on Alpha; observe its last-update becoming stale. Toggle Wi-Fi back on: queued samples are signed and imported in sequence (the **firmware** queue uses persistent LittleFS; **simulation** queue lives in RAM).
-6. Toggle heat spike and degraded compressor on Alpha. Observe temperature, forecast warnings, and relocation suggestions when Beta is below 6.5°C and healthy. As Pharmacist, confirm one recommended move; the server records the action.
-7. Visit Security & audit; press **Verify integrity** to validate the SHA-256 chain, then export temperature readings.
-8. Run `python -m pytest -q` and show the actual passing tests; open `report/model_metrics.json` and `report/forecast_validation.png`, explicitly declaring all training/test trajectories **synthetic**.
+| MAE | RMSE | Breach precision | Breach recall | F1 |
+|---|---|---|---|---|
+| 1.48 °C | 1.87 °C | 86.6 % | 87.0 % | 0.868 |
 
-See the timed presenter script in `docs/DEMO_SCRIPT.md`.
+Compressor health = latest uninterrupted cooling run (°C/min) ÷ the fridge's best run, scaled 0–100.
+Relocation picks the safest fridge (online, 2.5–6.5 °C, mains on, no forecast risk) and lists batches with the
+least budget first. Details: [docs/AI_METHOD.md](docs/AI_METHOD.md).
+</details>
 
-## 4. Hardware route (two real ESP32s)
+## 🚀 Run it yourself
 
-1. Create `firmware/ColdChain_ESP32/secrets.h` from `secrets.example.h`.
-2. Build two physical nodes using the wiring checklist in `firmware/ColdChain_ESP32/README.md`.
-3. Flash one with `FRIDGE_A` / secret A, and the other with `FRIDGE_B` / secret B, using Arduino IDE 2.x and the listed libraries.
-4. Provide a dedicated Mosquitto broker (Docker example included). Point both ESP32 sketches to the broker's LAN IP.
-5. Start backend with `MQTT_ENABLED=1`, `DEMO_MODE=0`, and matching secrets. The backend subscribes to `coldchain/telemetry/+` and publishes signed ACKs and discard commands.
-6. Test 7°C / 3°C hysteresis, 60-second minimum compressor off-time, door alarm, 30+ minutes network loss, ordered replay, battery sensing, and physical red-latch reset **on hardware**. These steps were not verified by this package creation.
+**Windows, one click:** double-click `START_DEMO_WINDOWS.bat`.
 
-Do **not** connect refrigerator mains or use a non-isolated relay without qualified electrical supervision. For clinical use, enforce certified independent thermostat/freeze protection, calibrated probes, device auth + TLS + broker ACLs, protected power supply, and audited procedures.
+**Any OS:**
 
-## 5. SMS / Telegram / email integration
-
-In private `.env` set `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` **or** configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `ALERT_EMAIL_TO`. When a device door remains open **strictly more than 60 seconds**, the backend attempts a Telegram message or email. Each delivery outcome is stored in `alert_outbox` as `delivered`, `failed`, or `not_configured` — a missing external credential is never reported as success.
-
-## 6. Run tests and retrain
-
-```powershell
-python -m pytest -q
-python train_model.py
+```bash
+git clone https://github.com/Pranto-404/Coldchain.git
+cd Coldchain
+python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python run_demo.py                                  # http://127.0.0.1:8000
 ```
 
-Tests include auth roles, signed telemetry, replay refusal, ID/sequence deduplication, modified payload rejection, 2x >12°C exposure, 8°C boundary, At Risk/Discard status, reset restriction, relocation, public QR, log tampering, simulation recovery, and 60-second door alert. Refer to `docs/VALIDATION.md` for results and limitations.
+**Docker (with an MQTT broker):** `docker compose up --build`
 
-The RandomForest model is trained with seed **20261021** using **220 independently seeded synthetic refrigeration trajectories**, split **by entire trajectory** into 171 train / 49 test trajectories (not random overlapping samples). It predicts the temperature **30 minutes ahead** using eight features. The reproducible metrics are in `report/model_metrics.json`. This is **not performance proven on any actual medical refrigerator**.
+**Render:** [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Pranto-404/Coldchain) — uses [`render.yaml`](render.yaml).
 
-## 7. Repository map
+**Real hardware:** flash [`firmware/ColdChain_ESP32`](firmware/ColdChain_ESP32) to two ESP32 boards, then follow
+[docs/HACKATHON_KIT.md](docs/HACKATHON_KIT.md) and [docs/ONSITE_DAY_GUIDE.md](docs/ONSITE_DAY_GUIDE.md).
 
-```text
-coldchain/             FastAPI app, database, security, alerting, exposure engine, predictor, MQTT bridge, demo twin
-web/                   Responsive HTML, CSS, and dependency-free JavaScript
-firmware/ColdChain_ESP32/
-                       Dual-node Arduino firmware + wiring + config template
-models/                Pretrained synthetic RandomForest model
-train_model.py         Deterministic synthetic dataset creation, training, holdout evaluation
-report/                Model data and validation graphics + PDF competition report
-assets/                Optional screenshots / supporting evidence
-features & tests:      tests/ (pytest suite)
-docs/                  Scoring matrix, architecture, deployment, QA, demonstration
-Dockerfile, docker-compose.yml, mosquitto.conf
-                       Demo-only MQTT broker and API container wiring
+| Variable | Purpose |
+|---|---|
+| `DEMO_MODE=1` | Run the two simulated nodes and demo accounts |
+| `JWT_SECRET` | 32+ characters; required when `DEMO_MODE=0` |
+| `DEVICE_FRIDGE_A_SECRET`, `DEVICE_FRIDGE_B_SECRET` | Per-device HMAC keys (live mode) |
+| `MQTT_ENABLED`, `MQTT_HOST`, `MQTT_PORT` | Connect to the broker |
+| `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`, or `SMTP_*` | Door-alert delivery |
+| `PUBLIC_BASE_URL` | Address encoded in printed QR codes |
+| `ALLOW_REGISTRATION=0` | Turn off self sign-up |
+
+## 🗂 Project layout
+
+```
+coldchain/            FastAPI app, ingest + security, simulator, forecast, MQTT bridge, alerts
+web/                  Front end (vanilla JS, no build step): dashboard, hardware view, themes
+firmware/             ESP32 sketch, pin map, secrets template
+models/ · report/     Trained forecast model, metrics, validation plot, competition PDF
+tests/                pytest suite (41 tests) — run with: pytest -q
+docs/                 Method, architecture, threat model, on-site guide, change logs
 ```
 
-## 8. Technical rules and safety assumptions
+## ✅ Testing
 
-- **Fridge control (node):** compressor ON when `T>=7°C` and minimum-off counter permits, OFF at `T<=3°C`; independent of cloud response.
-- **Status:** safe within normal 2–8°C envelope, warning for approaching upper limit, open door, or power off, breach for outside 2–8°C / latch / sensor fault.
-- **Budget:** first observed interval above 8°C is weighted 1x; above 12°C is weighted 2x; stops counting after 60 weighted minutes; `<20%` remaining gives At Risk, `0%` is irreversible discard latch unless admin uses the restricted software reset.
-- **Missing sensor data:** gaps over 90 seconds are flagged and **not silently filled as safe or assumed heat exposure**. Missing interval clinical stability requires independent assessment.
-- **Tamper detection:** chained event hashes also cross-check `readings` table values; production hardening should anchor signed daily head hashes outside the writable database.
-- **Relocation:** model/threshold recommendation uses source danger and a current, powered, closed, sufficiently cool destination. It cannot verify physical capacity, compatibility, or handling procedure. A user's confirmation updates the inventory ledger, not the physical batch.
-- **Model and compressor health:** predictive output and health index are **advisory**, not validated medical risk metrics.
+```bash
+pytest -q
+```
 
-## 9. Production security checklist
+Covers roles and permissions, HMAC / replay / stale-packet rejection, duplicate-free offline replay, the
+12 °C double-count and discard latch, hash-chain tamper detection, relocation, sign-up and approval, the
+simulator, and the forecast. CI runs the suite on every push.
 
-- Set unique 32+ character device secrets and JWT secret, never commit `.env` or `secrets.h`.
-- Switch `DEMO_MODE=0`, enable HTTPS reverse proxy and MQTT TLS on a private network.
-- Replace demo MQTT `allow_anonymous true` with per-device username/cert and ACLs before any public deployment.
-- Restrict public QR to opaque token only; don't include recipient data or patient information.
-- Protect databases/backups and use externally anchored audit hashes for adversarial tamper resistance.
-- Retest firmware on two actual devices and calibrate probe and battery divider.
-- Provide alert service credentials; test real delivery to a subscribed recipient.
-- Confirm expiry, stability rules, beyond-use decisions and quarantine with a licensed pharmacist.
+## ⚠️ Limitations
 
-**Authoring integrity:** No real-world test evidence, photographed hardware, credentialed email delivery, or clinical model validation is claimed. The deliverable is a runnable, inspectable software implementation plus firmware source ready for hardware integration.
+ColdChain is a competition prototype, **not a certified medical device**. The forecast is trained on simulated
+data and needs real fridge traces before field use; battery percentage needs a calibrated divider; the reference
+relay circuit drives a low-voltage demo load only. See [docs/VALIDATION.md](docs/VALIDATION.md).
 
-## 10. Easy Windows launch and broker hardening
+## 📜 Changelog
 
-You can double-click **`START_DEMO_WINDOWS.bat`** even if Python is not installed; it automatically installs a verified user-level runtime and dependencies with internet access, reuses them on subsequent runs, and opens the browser when ready. **`RUN_TESTS_WINDOWS.bat`** also performs automatic setup before running automated tests. Source-controlled launchers contain no user passwords except the deliberately public local-demo sample credential.
+[V12](docs/V12_CHANGES.md) accounts, themes, manual hardware control ·
+[V11](docs/V11_CHANGES.md) hardware view, redesign, deployment ·
+[V10](docs/V10_CHANGES.md) audit fixes
 
-For production broker hardening, compare `mosquitto.production.example.conf` and `mosquitto.acl.example`. Provision private TLS certificates, password file, and unique authentication credentials per device; never use the included anonymous local-demo broker on the open internet.
+---
 
-The included pretrained model was generated with **scikit-learn 1.8.0**; that version is pinned in requirements to avoid loading a pickle with incompatible library versions. Do not load any untrusted `.joblib` model file.
+<p align="center"><sub>Made for FastRoboX 1.0 by <a href="https://github.com/Pranto-404">@Pranto-404</a>.</sub></p>
