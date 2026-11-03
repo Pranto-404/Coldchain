@@ -1,3 +1,9 @@
+# COLDCHAIN V11
+
+**Live demo:** https://coldchain-monitor-30qu.onrender.com — new interactive **Hardware** page (ESP32 node, wiring, MQTT packets, thermostat), redesigned interface, 38 tests passing. See `docs/V11_CHANGES.md`, then `docs/V10_CHANGES.md` for the earlier audit fixes.
+
+---
+
 # COLDCHAIN V10 — WHAT'S NEW
 
 V10 fixes 14 bugs found in a full audit of V9 and rebuilds the web UI: digital-twin fridge cards (OLED, LEDs, compressor), an interactive chart with the AI +30 min forecast, a notification center, an AI insights page with the model report, live attack/tamper demos, user management, inventory search/edit/dispose, one-click lab scenarios and a phone-first public QR page. **See `docs/V10_CHANGES.md`** for the bug table, the feature list and a 3-minute demo path. Tests: 36 passed.
