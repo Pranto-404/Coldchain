@@ -5,15 +5,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE-ME.onrender.com/api/:path*"
+      "destination": "https://coldchain-monitor-30qu.onrender.com/api/:path*"
     },
     {
       "source": "/check/:token",
-      "destination": "https://REPLACE-ME.onrender.com/check/:token"
+      "destination": "https://coldchain-monitor-30qu.onrender.com/check/:token"
     },
     {
       "source": "/health",
-      "destination": "https://REPLACE-ME.onrender.com/health"
+      "destination": "https://coldchain-monitor-30qu.onrender.com/health"
     }
   ]
 }
