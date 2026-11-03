@@ -19,10 +19,14 @@ from .security import signature
 
 ROOT=Path(__file__).resolve().parents[1]
 JWT_ALGO='HS256'
+import secrets as _secrets
+# Demo without a configured secret: random per process, so a token can't be forged from the public
+# source. Sessions end when the server restarts, which on a free host also resets the demo data.
+_EPHEMERAL_JWT=_secrets.token_urlsafe(48)
 def jwt_secret():
     key=os.getenv('JWT_SECRET','')
     if len(key)<32:
-        if os.getenv('DEMO_MODE')=='1': return 'LOCAL_DEMO_ONLY_SUPER_LONG_SECRET_CHANGE_FOR_DEPLOY'
+        if os.getenv('DEMO_MODE')=='1': return _EPHEMERAL_JWT
         raise RuntimeError('JWT_SECRET needs at least 32 characters')
     return key
 
