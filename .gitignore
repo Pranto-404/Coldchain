@@ -1,0 +1,24 @@
+.env
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+.pytest_cache/
+.venv/
+.idea/
+# On-site generated secrets and workstations
+ONSITE_PRIVATE_CREDENTIALS.txt
+ONSITE_PRIVATE_CREDENTIALS.txt.previous
+.env.previous
+firmware/ColdChain_A/
+firmware/ColdChain_B/
+logs/
+.venv_backup_*/
+
+# Vercel cloud local settings
+.vercel/
+.DS_Store
+
+# Local tooling and private firmware secrets
+.claude/
+firmware/**/secrets.h

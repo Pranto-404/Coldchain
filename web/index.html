@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#15171c">
+<meta name="description" content="ColdChain — vaccine and medicine storage monitor: ESP32 fridge nodes, heat-exposure budgets, signed telemetry and 30-minute breach forecasts.">
+<title>ColdChain · Vaccine storage monitor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2315171c'/%3E%3Cpath d='M32 12v40M14.7 22l34.6 20M14.7 42l34.6-20' stroke='%237fb2ff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/static/styles.css?v=11.0">
+<script src="/static/app.js?v=11.0" defer></script>
+<script src="/static/hardware.js?v=11.0" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<!-- ============ SIGN IN ============ -->
+<div id="login-screen" class="login-shell">
+  <section class="login-left">
+    <div class="wordmark"><span class="mark" data-ic="snow"></span>ColdChain</div>
+    <h1>Vaccines stay potent between <em>2&nbsp;and&nbsp;8&nbsp;°C</em>. This watches every minute they don't.</h1>
+    <figure class="trace" aria-hidden="true">
+      <svg viewBox="0 0 520 170" preserveAspectRatio="none">
+        <rect class="band" x="0" y="44" width="520" height="86"/>
+        <line class="lim" x1="0" x2="520" y1="44" y2="44"/><line class="lim lo" x1="0" x2="520" y1="130" y2="130"/>
+        <text x="6" y="38">8 °C</text><text x="6" y="146">2 °C</text>
+        <path class="line" d="M0 98 C30 96 40 70 70 66 S110 110 140 104 S180 70 210 68 S250 108 280 104 S320 72 345 64 S360 40 375 28 S400 34 410 56 S440 104 470 100 S510 74 520 72"/>
+        <circle class="blip" r="4" cx="375" cy="28"/>
+      </svg>
+      <figcaption><span class="dot-bad"></span> Door left open · heat budget used: 4 of 60 weighted minutes</figcaption>
+    </figure>
+    <dl class="spec">
+      <div><dt>Nodes</dt><dd>2 × ESP32 · DS18B20 · reed switch · relay · OLED</dd></div>
+      <div><dt>Thermostat</dt><dd>on ≥ 7 °C · off ≤ 3 °C · 60 s minimum off</dd></div>
+      <div><dt>Heat budget</dt><dd>60 min above 8 °C · above 12 °C counts double</dd></div>
+      <div><dt>Telemetry</dt><dd>MQTT every 5 s · HMAC-SHA256 · nonce · 30 min offline buffer</dd></div>
+      <div><dt>Records</dt><dd>SHA-256 hash chain · verify on demand</dd></div>
+      <div><dt>Forecast</dt><dd>temperature 30 min ahead · compressor health 0–100</dd></div>
+    </dl>
+  </section>
+
+  <section class="login-right">
+    <div class="login-panel">
+      <h2 id="login-title">Sign in</h2>
+      <p id="login-subtitle" class="muted">Demo build — pick a role to enter.</p>
+      <div class="role-list" id="demo-cred-list">
+        <button type="button" class="cred-card" data-user="admin" data-pass="ColdChainDemo_Admin2026!">
+          <span class="cred-tag admin">ADM</span>
+          <span class="cred-text"><strong>Administrator</strong><small>Users, latch reset, tamper test</small></span>
+          <span class="cred-go" data-ic="arrow"></span>
+        </button>
+        <button type="button" class="cred-card" data-user="pharmacist" data-pass="ColdChainDemo_Pharmacist2026!">
+          <span class="cred-tag pharmacist">PHA</span>
+          <span class="cred-text"><strong>Pharmacist</strong><small>Stock, moves, confirm relocation</small></span>
+          <span class="cred-go" data-ic="arrow"></span>
+        </button>
+        <button type="button" class="cred-card" data-user="inspector" data-pass="ColdChainDemo_Inspector2026!">
+          <span class="cred-tag inspector">INS</span>
+          <span class="cred-text"><strong>Inspector</strong><small>Read-only: telemetry, audit, integrity</small></span>
+          <span class="cred-go" data-ic="arrow"></span>
+        </button>
+      </div>
+      <details class="manual-login" id="manual-login">
+        <summary>Use a username and password</summary>
+        <form id="login-form" class="stack-form">
+          <label for="login-username">Username</label>
+          <input id="login-username" type="text" autocomplete="username" required>
+          <label for="login-password">Password</label>
+          <div class="pw-wrap">
+            <input id="login-password" type="password" autocomplete="current-password" required>
+            <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password">Show</button>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+        </form>
+      </details>
+      <div id="login-error" class="error" role="alert"></div>
+      <p class="fineprint" id="login-mode-notice">Demo data is simulated. Prototype for FastRoboX — not a certified medical device.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app-shell" class="app-shell hidden">
+  <aside class="sidebar">
+    <a href="#dashboard" class="brand-line" data-page-link="dashboard"><span class="mark" data-ic="snow"></span><span>ColdChain</span></a>
+    <div class="facility">
+      <span class="facility-status" id="facility-status"></span>
+      <div><b id="facility-name">Demo pharmacy</b><small id="facility-summary">connecting…</small></div>
+    </div>
+    <nav class="nav-stack" aria-label="Primary">
+      <button data-page="dashboard" class="nav-link active"><span data-ic="grid"></span><span>Overview</span><kbd>1</kbd></button>
+      <button data-page="hardware" class="nav-link"><span data-ic="chip"></span><span>Hardware</span><kbd>2</kbd></button>
+      <button data-page="inventory" class="nav-link"><span data-ic="box"></span><span>Inventory</span><span id="inventory-count" class="nav-pill">0</span></button>
+      <button data-page="ai" class="nav-link"><span data-ic="spark"></span><span>Forecast</span><span id="ai-pill" class="nav-pill warn hidden">!</span></button>
+      <button data-page="security" class="nav-link"><span data-ic="shield"></span><span>Security</span><span id="sec-pill" class="nav-pill warn hidden">0</span></button>
+      <button data-page="users" class="nav-link admin-only"><span data-ic="users"></span><span>Users</span></button>
+      <button data-page="lab" class="nav-link demo-nav"><span data-ic="flask"></span><span>Scenarios</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <p class="keys"><kbd>1</kbd>–<kbd>7</kbd> pages · <kbd>/</kbd> search · <kbd>R</kbd> refresh</p>
+      <button class="logout-link" id="logout-btn"><span data-ic="logout"></span>Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main-shell" id="main-content">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1 class="top-title" id="page-title">Overview</h1>
+        <span class="crumbs" id="current-breadcrumb"></span>
+      </div>
+      <div class="topbar-actions">
+        <div class="sync-pill" id="sync-pill" title="Data refreshes every 5 seconds"><span class="pulse"></span><span id="connection-status">connecting</span></div>
+        <div class="clock-pill mono" id="clock">--:--:--</div>
+        <div class="bell-wrap">
+          <button class="bell-btn" id="bell-btn" aria-haspopup="true" aria-expanded="false" aria-label="Alerts">
+            <span data-ic="bell"></span><span class="bell-count hidden" id="bell-count">0</span>
+          </button>
+          <div class="bell-panel hidden" id="bell-panel" role="dialog" aria-label="Active alerts">
+            <div class="bell-head"><strong>Active alerts</strong><label class="sound-toggle"><input type="checkbox" id="sound-toggle"> sound</label></div>
+            <div id="bell-list" class="bell-list"></div>
+          </div>
+        </div>
+        <div class="profile-chip"><span class="avatar" id="avatar">AD</span><span class="profile-text"><strong id="logged-user">admin</strong><small id="logged-role">Admin</small></span></div>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <div id="demo-notice" class="demo-banner hidden"><b>Simulation</b> — both fridges are software twins of the ESP32 nodes.<span class="demo-nav"> Trigger faults from <button class="link-btn" data-open="lab">Scenarios</button> or click parts on the <button class="link-btn" data-open="hardware">Hardware</button> page.</span></div>
+      <div id="critical-banner" class="critical-banner hidden" role="alert"></div>
+
+      <!-- OVERVIEW -->
+      <section id="page-dashboard" class="page-view">
+        <div id="metrics" class="metrics-grid"></div>
+        <section class="panel">
+          <header class="panel-head">
+            <h3><span class="num">01</span>Fridges</h3>
+            <div class="panel-tools">
+              <div class="seg" role="group" aria-label="Chart range">
+                <button class="seg-btn" data-range="120">10m</button>
+                <button class="seg-btn active" data-range="360">30m</button>
+                <button class="seg-btn" data-range="1440">2h</button>
+              </div>
+            </div>
+          </header>
+          <div id="fridge-grid" class="fridge-grid"></div>
+        </section>
+        <div class="two-col">
+          <section class="panel">
+            <header class="panel-head"><h3><span class="num">02</span>Relocation advice</h3><span class="tag">forecast-driven</span></header>
+            <div id="relocation-list" class="list-stack"></div>
+          </section>
+          <section class="panel">
+            <header class="panel-head"><h3><span class="num">03</span>Activity</h3><button class="link-btn" data-open="security">audit trail</button></header>
+            <div id="event-list" class="event-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- HARDWARE -->
+      <section id="page-hardware" class="page-view hidden">
+        <div class="hw-top">
+          <div class="seg big" role="group" aria-label="Choose node" id="hw-tabs">
+            <button class="seg-btn active" data-hw="FRIDGE_A">Node A · Alpha</button>
+            <button class="seg-btn" data-hw="FRIDGE_B">Node B · Beta</button>
+          </div>
+          <p class="hw-hint" id="hw-hint">Click the <b>door</b>, the <b>mains-fail button</b> or the <b>antenna</b> to change the node.</p>
+        </div>
+        <div class="hw-layout">
+          <section class="panel hw-stage">
+            <div id="hw-scene" class="hw-scene"></div>
+          </section>
+          <div class="hw-side">
+            <section class="panel">
+              <header class="panel-head"><h3>Thermostat</h3><span class="tag mono" id="hw-state-tag">—</span></header>
+              <div id="hw-fsm"></div>
+            </section>
+            <section class="panel">
+              <header class="panel-head"><h3>Pin map</h3><span class="tag mono">ESP32 DevKit</span></header>
+              <div id="hw-pins"></div>
+            </section>
+          </div>
+        </div>
+        <section class="panel serial">
+          <header class="panel-head"><h3>Serial monitor <span class="muted mono">115200 baud</span></h3><button class="link-btn" id="serial-clear">clear</button></header>
+          <pre id="hw-serial" class="serial-out" aria-live="off"></pre>
+        </section>
+      </section>
+
+      <!-- INVENTORY -->
+      <section id="page-inventory" class="page-view hidden">
+        <div class="toolbar">
+          <label class="search-wrap"><span data-ic="search"></span><input id="inv-search" type="search" placeholder="Search product or lot" aria-label="Search batches"><kbd>/</kbd></label>
+          <div class="chip-filter" id="inv-status" role="group" aria-label="Filter by status">
+            <button class="fchip active" data-status="all">All <b id="cnt-all">0</b></button>
+            <button class="fchip" data-status="Safe">Safe <b id="cnt-safe">0</b></button>
+            <button class="fchip warn" data-status="At Risk">At risk <b id="cnt-risk">0</b></button>
+            <button class="fchip danger" data-status="Discard">Discard <b id="cnt-discard">0</b></button>
+            <button class="fchip danger" data-status="expired">Expired <b id="cnt-expired">0</b></button>
+          </div>
+          <select id="inv-fridge" aria-label="Filter by fridge"><option value="all">All fridges</option><option value="FRIDGE_A">Fridge Alpha</option><option value="FRIDGE_B">Fridge Beta</option></select>
+          <button class="btn btn-primary edit-only" id="new-batch-btn"><span data-ic="plus"></span>Add batch</button>
+        </div>
+        <section class="panel flush">
+          <div class="table-wrap">
+            <table class="inventory-table">
+              <thead><tr>
+                <th><button class="sort-btn" data-sort="name">Product</button></th>
+                <th><button class="sort-btn" data-sort="fridge_id">Fridge</button></th>
+                <th><button class="sort-btn" data-sort="remaining_pct">Heat budget</button></th>
+                <th><button class="sort-btn" data-sort="expires">Expiry</button></th>
+                <th>Status</th><th class="right">Actions</th>
+              </tr></thead>
+              <tbody id="inventory-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+        <p class="footnote">Each batch may spend 60 weighted minutes above 8 °C; minutes above 12 °C count twice. Under 20 % left it is <b>At risk</b>; at 0 % it is <b>Discard</b> and the node's red LED stays latched until an administrator resets it.</p>
+      </section>
+
+      <!-- FORECAST -->
+      <section id="page-ai" class="page-view hidden">
+        <div id="ai-live" class="two-col"></div>
+        <div class="two-col">
+          <section class="panel">
+            <header class="panel-head"><h3><span class="num">02</span>What to move, and where</h3></header>
+            <div id="ai-relocation" class="list-stack"></div>
+          </section>
+          <section class="panel">
+            <header class="panel-head"><h3><span class="num">03</span>Method</h3></header>
+            <ol class="how-list">
+              <li><b>Features</b> come from the last 5 minutes of signed readings: level, slope, spread, door, mains, compressor duty.</li>
+              <li><b>A random forest</b> predicts the temperature 30 minutes ahead. Above 8 °C raises a warning.</li>
+              <li><b>Compressor health</b> divides the latest cooling run's rate by the fridge's best run.</li>
+              <li><b>Relocation</b> targets the safest fridge (online, 2.5–6.5 °C, mains on, no forecast risk) and lists batches with the least budget first.</li>
+              <li><b>One click</b> by a pharmacist records the move. Exposure history stays with the batch.</li>
+            </ol>
+          </section>
+        </div>
+        <section class="panel" id="ai-report"></section>
+      </section>
+
+      <!-- SECURITY -->
+      <section id="page-security" class="page-view hidden">
+        <div class="two-col">
+          <article class="panel">
+            <header class="panel-head"><h3><span data-ic="chain" class="h-ic"></span>Hash-chain integrity</h3></header>
+            <p class="muted">Each record stores <code>sha256(prev | time | actor | action | data)</code>. Sensor rows are also checked against their chained copy, so editing any past reading breaks verification.</p>
+            <div class="chain-viz" id="chain-viz" aria-hidden="true"></div>
+            <div id="integrity-result" class="integrity-box">Run <b>Verify</b> to check every record.</div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="verify-btn"><span data-ic="check"></span>Verify integrity</button>
+              <button class="btn btn-danger-soft admin-only demo-only" id="tamper-btn">Tamper a reading</button>
+              <button class="btn btn-secondary admin-only demo-only hidden" id="restore-btn"><span data-ic="reset"></span>Undo tamper</button>
+            </div>
+          </article>
+          <article class="panel">
+            <header class="panel-head"><h3><span data-ic="key" class="h-ic"></span>Signed telemetry</h3></header>
+            <p class="muted">Packets carry <code>HMAC-SHA256</code> over every field, a timestamp (±120 s) and a one-time nonce. Bad, old or replayed packets are rejected and logged. Try one:</p>
+            <div class="attack-grid edit-only demo-only">
+              <button class="attack-btn" data-attack="forged"><b>Forged signature</b><small>attacker without the key</small></button>
+              <button class="attack-btn" data-attack="replay"><b>Replay</b><small>re-send a captured nonce</small></button>
+              <button class="attack-btn" data-attack="stale"><b>Stale packet</b><small>15 minutes old</small></button>
+              <button class="attack-btn" data-attack="unknown_device"><b>Unknown device</b><small>spoofed FRIDGE_X</small></button>
+            </div>
+            <div id="attack-result" class="attack-result hidden" aria-live="polite"></div>
+          </article>
+        </div>
+        <section class="panel">
+          <header class="panel-head"><h3>Rejected packets <span class="count-badge" id="rej-count">0</span></h3></header>
+          <div id="rejection-list" class="table-wrap"></div>
+        </section>
+        <section class="panel">
+          <header class="panel-head">
+            <h3>Audit log</h3>
+            <div class="panel-tools">
+              <label class="check-inline"><input type="checkbox" id="show-readings"> include sensor readings</label>
+              <a class="btn btn-secondary btn-sm" href="/api/readings/export.csv" id="csv-link">Export CSV</a>
+            </div>
+          </header>
+          <div id="audit-list" class="event-list"></div>
+        </section>
+      </section>
+
+      <!-- USERS -->
+      <section id="page-users" class="page-view hidden">
+        <div class="two-col wide-left">
+          <section class="panel">
+            <header class="panel-head"><h3>Accounts</h3></header>
+            <div id="user-list" class="table-wrap"></div>
+          </section>
+          <section class="panel">
+            <header class="panel-head"><h3>New account</h3></header>
+            <form id="user-form" class="stack-form">
+              <label for="nu-name">Username</label><input id="nu-name" required minlength="3" maxlength="40" autocomplete="off">
+              <label for="nu-pass">Password (8+ characters)</label><input id="nu-pass" type="password" required minlength="8" autocomplete="new-password">
+              <label for="nu-role">Role</label>
+              <select id="nu-role"><option>Pharmacist</option><option>Inspector</option><option>Admin</option></select>
+              <button class="btn btn-primary btn-block" type="submit">Create account</button>
+            </form>
+            <table class="perm-table">
+              <thead><tr><th>Permission</th><th>Adm</th><th>Pha</th><th>Ins</th></tr></thead>
+              <tbody>
+                <tr><td>View dashboard, audit, integrity</td><td class="y">●</td><td class="y">●</td><td class="y">●</td></tr>
+                <tr><td>Add, edit, move batches</td><td class="y">●</td><td class="y">●</td><td>–</td></tr>
+                <tr><td>Confirm relocation</td><td class="y">●</td><td class="y">●</td><td>–</td></tr>
+                <tr><td>Reset discard latch</td><td class="y">●</td><td>–</td><td>–</td></tr>
+                <tr><td>Manage users</td><td class="y">●</td><td>–</td><td>–</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </section>
+
+      <!-- SCENARIOS -->
+      <section id="page-lab" class="page-view hidden">
+        <section class="panel">
+          <header class="panel-head">
+            <h3>Scenarios <span class="muted">one click each, written to the audit log</span></h3>
+            <button class="btn btn-secondary btn-sm" id="sim-reset-btn"><span data-ic="reset"></span>Back to normal</button>
+          </header>
+          <div class="scenario-grid">
+            <article class="scenario-card"><span class="scenario-tag">Task 3</span><h4>Door left open</h4><p>Fridge Alpha's door opens. After 60 s the buzzer sounds and an alert goes out by Telegram/email if configured.</p><button class="btn btn-secondary btn-sm quick" data-quick="door">Open the door</button></article>
+            <article class="scenario-card"><span class="scenario-tag">Task 3</span><h4>Power failure</h4><p>Mains cut on Fridge Alpha. Compressor stops, battery drains, status shows battery.</p><button class="btn btn-secondary btn-sm quick" data-quick="power">Cut mains</button></article>
+            <article class="scenario-card"><span class="scenario-tag">Task 3</span><h4>Wi-Fi outage</h4><p>Readings queue on the node and sync in order, without duplicates, when Wi-Fi returns.</p><button class="btn btn-secondary btn-sm quick" data-quick="wifi">Drop Wi-Fi</button></article>
+            <article class="scenario-card"><span class="scenario-tag">Task 5</span><h4>Weak compressor</h4><p>Cooling capacity falls ~70 %. The health score drops on the next cooling run.</p><button class="btn btn-secondary btn-sm quick" data-quick="weak">Weaken compressor</button></article>
+            <article class="scenario-card"><span class="scenario-tag">Task 5</span><h4>Rising risk</h4><p>Alpha warms under load with a weak compressor; the forecast flags it and suggests moving stock to Beta.</p><button class="btn btn-secondary btn-sm" id="round1-forecast-btn">Stage rising risk</button></article>
+            <article class="scenario-card"><span class="scenario-tag">Task 2</span><h4>Heat budget</h4><p>Put a labelled sample batch at a known exposure and check its status.</p>
+              <div class="scenario-actions"><button class="mini-btn scenario-exposure" data-scenario="safe">100 %</button><button class="mini-btn scenario-exposure" data-scenario="at_risk">15 %</button><button class="mini-btn scenario-exposure" data-scenario="discard">0 %</button></div></article>
+          </div>
+          <div id="scenario-feedback" class="scenario-feedback" aria-live="polite">Pick a scenario.</div>
+        </section>
+        <section class="panel">
+          <header class="panel-head"><h3>Node switches</h3></header>
+          <div id="lab-controls" class="two-col"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="modal-title">Action</h3><button id="modal-close" class="icon-btn" aria-label="Close"><span data-ic="x"></span></button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<div id="toasts" class="toast-stack" aria-live="polite"></div>
+</body>
+</html>

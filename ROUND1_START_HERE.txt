@@ -1,0 +1,52 @@
+FASTROBOX 1.0 — ROUND 1 SOFTWARE SIMULATION
+============================================
+ColdChain: vaccine & medicine storage monitor
+
+READ THIS FIRST
+1. Extract the FULL ZIP to a writable Windows directory.
+2. Double-click START_DEMO_WINDOWS.bat (inside the extracted folder).
+3. Wait for Python setup (internet may be needed on first run) and browser startup.
+4. Choose a role card on the login screen, then click Enter dashboard.
+
+DEMO CREDENTIALS (LOCAL ONLY)
+Admin:       admin       / ColdChainDemo_Admin2026!
+Pharmacist:  pharmacist  / ColdChainDemo_Pharmacist2026!
+Inspector:   inspector   / ColdChainDemo_Inspector2026!
+
+RECOMMENDED ROUND 1 QUESTIONS: Q2 + Q4 + Q5
+
+Q4 WEB APP:
+- Overview -> fridge data and prediction
+- Inventory -> lot/expiry/budget -> QR
+- Security & audit -> Verify integrity
+- Inspector role -> restricted/read-only functions
+
+Q2 EXPOSURE:
+- Simulation lab -> Round 1 presentation scenes -> At Risk (15% left)
+- Inventory -> see SIM-R1-EXPOSURE and 51/60 weighted minutes
+- Simulation lab -> Discard (0% left)
+- Inventory -> see Discard and 60/60 weighted minutes
+These are staged SYNTHETIC historical scenarios, not real sensor records.
+
+Q5 AI:
+- Simulation lab -> Stage forecast risk
+- Overview -> predicted warning for Fridge Alpha, compressor health,
+  suggested transfer to Fridge Beta (when conditions allow)
+- Sign out, use Pharmacist login, then confirm a recommended move in Overview.
+The forecast is trained/evaluated on SYNTHETIC trajectories only.
+
+FINAL VIDEO:
+- At most 3 minutes; recommend 2:50–2:55.
+- Upload to Google Drive or Unlisted YouTube.
+- Check the public/unlisted link in an incognito window.
+- Paste link into https://forms.gle/be3EuPwQvHPZ8WTm7
+- Organizers state a deadline of 5 November 2026 (exact clock time not provided).
+
+IMPORTANT LIMITS:
+- Not real ESP32/hardware. Not validated medical monitoring.
+- External SMS/Telegram/email delivery is NOT automatically configured.
+- Browser screenshots and scenario controls represent simulation.
+- Windows BAT executable installation cannot be verified in this Linux workspace.
+
+Full presenter guide: docs/ROUND1_VIDEO_3MIN_GUIDE.md
+Verified software tests: report/ROUND1_QA_REPORT.md

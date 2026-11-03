@@ -1,0 +1,13 @@
+# Adapt to your actual authenticated broker user names.
+user fridge_a
+ topic write coldchain/telemetry/FRIDGE_A
+ topic read coldchain/ack/FRIDGE_A
+ topic read coldchain/cmd/FRIDGE_A
+user fridge_b
+ topic write coldchain/telemetry/FRIDGE_B
+ topic read coldchain/ack/FRIDGE_B
+ topic read coldchain/cmd/FRIDGE_B
+user backend
+ topic read coldchain/telemetry/+
+ topic write coldchain/ack/+
+ topic write coldchain/cmd/+

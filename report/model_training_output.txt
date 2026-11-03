@@ -1,0 +1,48 @@
+{
+  "data_provenance": "SYNTHETIC PHYSICS SIMULATION ONLY; NOT CLINICALLY VALIDATED",
+  "seed": 20261021,
+  "trajectories": 220,
+  "distinct_train_trajectories": 171,
+  "distinct_test_trajectories": 49,
+  "train_rows": 9405,
+  "test_rows": 2695,
+  "features": [
+    "temp_c",
+    "slope_c_per_min",
+    "mean_c",
+    "std_c",
+    "door_open",
+    "mains_ok",
+    "compressor_on",
+    "compressor_duty"
+  ],
+  "horizon_minutes": 30,
+  "mean_absolute_error_c": 1.509,
+  "root_mean_squared_error_c": 1.93,
+  "breach_precision": 0.853,
+  "breach_recall": 0.867,
+  "breach_f1": 0.86,
+  "breach_confusion_matrix_tn_fp_fn_tp": [
+    1089,
+    209,
+    186,
+    1211
+  ],
+  "feature_importances": {
+    "temp_c": 0.7608,
+    "slope_c_per_min": 0.1152,
+    "mean_c": 0.0269,
+    "std_c": 0.0496,
+    "door_open": 0.0104,
+    "mains_ok": 0.0159,
+    "compressor_on": 0.0007,
+    "compressor_duty": 0.0205
+  },
+  "limitations": [
+    "Synthetic-only data distribution",
+    "No external or site-specific temperature calibration",
+    "No independent real-fridge holdout",
+    "Sensor noise/device latency may differ in field",
+    "Thirty-minute forecasting may be unreliable outside training envelope"
+  ]
+}

@@ -1,0 +1,24 @@
+services:
+  broker:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports: ["1883:1883"]
+    networks: [coldchain]
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_PATH: /app/data/coldchain.db
+      MQTT_ENABLED: "1"
+      MQTT_HOST: broker
+    volumes: ["coldchain-data:/app/data"]
+    ports: ["8000:8000"]
+    depends_on: [broker]
+    networks: [coldchain]
+volumes:
+  coldchain-data:
+networks:
+  coldchain:

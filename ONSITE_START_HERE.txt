@@ -1,0 +1,30 @@
+COLDCHAIN - PREBUILT-SOFTWARE-ALLOWED ONSITE KIT
+===============================================
+
+THANK YOU FOR CONFIRMING PREBUILT CODE IS ALLOWED.
+Keep your original Round-1 software simulation video workflow as-is.
+The challenge still requires live ESP32 verification after hardware is supplied.
+
+THERE ARE NOW 2 DIFFERENT MODES:
+
+[A] ROUND 1 SOFTWARE ONLY - existing reliable demo:
+    START_DEMO_WINDOWS.bat
+    Includes 2 simulated fridges, demo login credentials, synthetic forecast & scenarios.
+    Does not need Mosquitto or any ESP32 board.
+
+[B] HACKATHON DAY - real hardware integration:
+    PREPARE_HARDWARE_WINDOWS.bat    -> generate private .env + two Arduino sketch profiles
+    START_BROKER_WINDOWS.bat        -> run locally installed Mosquitto on trusted hotspot
+    CHECK_HARDWARE_WINDOWS.bat      -> check matching secrets and broker connection
+    CHECK_ESP32_COMPILE_WINDOWS.bat -> optional arduino-cli compile; board type may vary
+    START_HARDWARE_WINDOWS.bat      -> start backend with DEMO_MODE=0, MQTT_ENABLED=1
+    CHECK_LIVE_TELEMETRY_WINDOWS.bat -> verify actual FRIDGE_A and FRIDGE_B sending data
+
+CAUTION: Before hardware is available, you cannot honestly claim real-sensor,
+relay, OLED, alarm or actual offline-storage tests. The ESP32 firmware
+is reference source and NOT yet compiler- or hardware-verified.
+
+Read docs/ONSITE_DAY_GUIDE.md before the event.
+
+The organizer email lists 13–14 November 2026; you mentioned 14–15 November.
+Confirm the official dates and hardware availability with organizers.
