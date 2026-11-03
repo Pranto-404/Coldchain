@@ -63,6 +63,11 @@ const IC={
   cross:'<path d="M12 4v16M4 12h16"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   power:'<path d="M12 3v8"/><path d="M6.6 6.6a7.5 7.5 0 1 0 10.8 0"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 20.5c.8-4 4-6 8-6s7.2 2 8 6"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  heat:'<path d="M8 20c-1.5-2 1.5-4 0-6s1.5-4 0-6M12 20c-1.5-2 1.5-4 0-6s1.5-4 0-6M16 20c-1.5-2 1.5-4 0-6s1.5-4 0-6"/>',
 };
 const icon=(name,cls='')=>`<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[name]||''}</svg>`;
 function hydrateIcons(root=document){root.querySelectorAll('[data-ic]').forEach(el=>{if(!el.__ic){el.innerHTML=icon(el.dataset.ic);el.__ic=1;}});}
@@ -138,10 +143,12 @@ function toast(message,kind='info'){
   const el=document.createElement('div');
   el.className=`toast ${kind}`;
   el.setAttribute('role',kind==='error'||kind==='danger'?'alert':'status');
-  el.innerHTML=`<span class="toast-ico">${icon(kind==='error'||kind==='danger'?'alert':kind==='success'?'check':'bell')}</span><span>${esc(message)}</span>`;
+  const ms=kind==='danger'?7000:4200;
+  el.innerHTML=`<span class="toast-ico">${icon(kind==='error'||kind==='danger'?'alert':kind==='success'?'check':'bell')}</span><span>${esc(message)}</span><i class="toast-bar" style="animation-duration:${ms}ms"></i>`;
+  el.addEventListener('click',()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);});
   $('toasts').appendChild(el);
   requestAnimationFrame(()=>el.classList.add('show'));
-  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);},kind==='danger'?7000:4200);
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);},ms);
 }
 
 function beep(){
@@ -157,39 +164,162 @@ function beep(){
   }catch{}
 }
 
-/* ---------- login ---------- */
-async function attemptLogin(username,password){
+/* ---------- theme ---------- */
+function setTheme(t){
+  document.documentElement.classList.add('theme-anim');
+  document.documentElement.dataset.theme=t;
+  localSet('cc_theme',t);
+  setTimeout(()=>document.documentElement.classList.remove('theme-anim'),450);
+  if(window.HW && state.page==='hardware') HW.update();
+}
+const toggleTheme=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+$$('[data-theme-toggle]').forEach(b=>b.addEventListener('click',toggleTheme));
+
+/* ---------- sign in / create account ---------- */
+async function enterWith(result,message){
   $('login-error').textContent='';
-  const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify({username,password})});
   state.token=result.access_token;
   sessionStorage.setItem('coldchain_token',state.token);
   state.user=await api('/api/me');
   revealApp();
   await refresh();
-  toast(`Signed in as ${state.user.username} (${roleLabel(state.user.role)}).`,'success');
+  toast(message||`Signed in as ${state.user.username} (${roleLabel(state.user.role)}).`,'success');
 }
+async function attemptLogin(username,password){
+  $('login-error').textContent='';
+  const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify({username,password})});
+  await enterWith(result);
+}
+function showAuth(which){
+  $$('.auth-tab').forEach(t=>{const on=t.dataset.auth===which;t.classList.toggle('active',on);t.setAttribute('aria-selected',String(on));});
+  $$('.auth-pane').forEach(p=>p.classList.toggle('hidden',p.dataset.pane!==which));
+  document.querySelector('.auth-tabs').dataset.active=which;
+  $('login-error').textContent='';
+  setTimeout(()=>document.querySelector(`.auth-pane[data-pane="${which}"] input`)?.focus(),60);
+}
+$$('.auth-tab').forEach(t=>t.addEventListener('click',()=>showAuth(t.dataset.auth)));
+$$('[data-auth-go]').forEach(b=>b.addEventListener('click',()=>showAuth(b.dataset.authGo)));
+
+function busy(btn,label){
+  const lab=btn.querySelector('.btn-label');const prev=lab?lab.textContent:'';
+  btn.disabled=true;btn.classList.add('is-busy');if(lab) lab.textContent=label;
+  return ()=>{btn.disabled=false;btn.classList.remove('is-busy');if(lab) lab.textContent=prev;};
+}
+function shake(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');}
 
 $$('.cred-card').forEach(card=>card.addEventListener('click',async()=>{
   $$('.cred-card').forEach(c=>c.classList.toggle('selected',c===card));
   card.classList.add('loading');card.disabled=true;
   try{await attemptLogin(card.dataset.user,card.dataset.pass);}
-  catch(err){$('login-error').textContent=err.message;}
+  catch(err){$('login-error').textContent=err.message;shake(document.querySelector('.auth-card'));}
   finally{card.classList.remove('loading');card.disabled=false;}
 }));
 
 $('login-form').addEventListener('submit',async e=>{
   e.preventDefault();
-  const btn=e.target.querySelector('button[type=submit]');
-  btn.disabled=true;btn.textContent='Signing in…';
-  try{await attemptLogin($('login-username').value.trim(),$('login-password').value);}
-  catch(err){$('login-error').textContent=err.message;}
-  finally{btn.disabled=false;btn.textContent='Sign in';}
+  const u=$('login-username').value.trim(),pw=$('login-password').value;
+  if(!u||!pw){$('login-error').textContent='Enter your username and password.';shake(e.target);return;}
+  const done=busy(e.target.querySelector('button[type=submit]'),'Signing in…');
+  try{await attemptLogin(u,pw);}
+  catch(err){$('login-error').textContent=err.message;shake(e.target);}
+  finally{done();}
 });
 $('pw-toggle').addEventListener('click',()=>{
   const input=$('login-password');const show=input.type==='password';
   input.type=show?'text':'password';$('pw-toggle').textContent=show?'Hide':'Show';
   $('pw-toggle').setAttribute('aria-label',show?'Hide password':'Show password');
 });
+
+function pwScore(pw){
+  let s=0;if(pw.length>=8)s++;if(pw.length>=12)s++;if(/[a-z]/.test(pw)&&/[A-Z]/.test(pw))s++;if(/\d/.test(pw))s++;if(/[^A-Za-z0-9]/.test(pw))s++;
+  return Math.min(4,s);
+}
+$('reg-password').addEventListener('input',e=>{
+  const pw=e.target.value,sc=pw?pwScore(pw):0;
+  const bar=$('pw-meter-bar');bar.style.width=`${pw?Math.max(10,sc*25):0}%`;bar.dataset.level=sc;
+  $('pw-meter-text').textContent=!pw?'At least 8 characters':pw.length<8?`${8-pw.length} more character${8-pw.length>1?'s':''}`:['Weak','Weak','Fair','Good','Strong'][sc]+' password';
+});
+$('register-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const u=$('reg-username').value.trim(),pw=$('reg-password').value,pw2=$('reg-password2').value;
+  const role=document.querySelector('input[name=reqrole]:checked')?.value||'Inspector';
+  const err=m=>{$('login-error').textContent=m;shake(e.target);};
+  if(!/^[A-Za-z0-9._@+-]{3,60}$/.test(u)) return err('Username: 3–60 letters, numbers or . _ - @ +');
+  if(pw.length<8) return err('Password needs at least 8 characters.');
+  if(pw!==pw2) return err('The two passwords do not match.');
+  const done=busy(e.target.querySelector('button[type=submit]'),'Creating…');
+  try{
+    const result=await api('/api/auth/register',{method:'POST',body:JSON.stringify({username:u,password:pw,requested_role:role})});
+    e.target.reset();$('pw-meter-bar').style.width='0';$('pw-meter-text').textContent='At least 8 characters';
+    await enterWith(result,role==='Pharmacist'?'Account created with read-only access. Your Pharmacist request is waiting for an admin.':'Account created. You have read-only Inspector access.');
+  }catch(ex){err(ex.message);}
+  finally{done();}
+});
+
+/* ---------- front page motion ---------- */
+(function frontPage(){
+  const field=$('frost-field');
+  if(field && !REDUCED_FRONT()){
+    for(let i=0;i<26;i++){
+      const d=document.createElement('i');
+      d.style.left=`${Math.random()*100}%`;d.style.animationDelay=`${-Math.random()*18}s`;
+      d.style.animationDuration=`${12+Math.random()*14}s`;d.style.setProperty('--s',`${1+Math.random()*2.6}px`);d.style.setProperty('--dx',`${(Math.random()*60-30).toFixed(0)}px`);
+      field.appendChild(d);
+    }
+  }
+  // count-up stats once visible
+  $$('[data-count]').forEach(el=>{
+    const to=Number(el.dataset.count),suf=el.dataset.suffix||'';let t0=null;
+    const step=t=>{t0??=t;const p=Math.min(1,(t-t0)/1200),v=Math.round(to*(1-Math.pow(1-p,3)));el.textContent=v+suf;if(p<1) requestAnimationFrame(step);};
+    setTimeout(()=>requestAnimationFrame(step),500);
+  });
+  // live preview card: a small local thermostat loop, clearly labelled "simulated preview"
+  let temp=4.8,comp=false,door=false,tick=0;const hist=[];
+  for(let i=0;i<80;i++) hist.push(4.8+Math.sin(i/9)*1.1);
+  const y=v=>88-(v-2)/6*66;
+  function frame(){
+    if(!$('login-screen') || $('login-screen').classList.contains('hidden')) return;
+    tick++;door=(tick%140)>118;
+    if(temp>=7) comp=true; if(temp<=3) comp=false;
+    temp+= (door?0.06:0.018) - (comp?0.07:0);
+    hist.push(temp);if(hist.length>80) hist.shift();
+    const pts=hist.map((v,i)=>`${(i*400/79).toFixed(1)},${y(v).toFixed(1)}`);
+    $('lc-line').setAttribute('d','M'+pts.join(' L'));
+    $('lc-dot').setAttribute('cy',y(temp).toFixed(1));
+    $('lc-temp').textContent=temp.toFixed(1);
+    const warn=temp>=7||door;$('lc-state').textContent=temp>8?'BREACH':warn?'WARNING':'SAFE';
+    $('lc-state').className='lc-state '+(temp>8?'danger':warn?'warning':'safe');
+    $('lc-door').textContent=door?'open':'closed';$('lc-comp').textContent=comp?'cooling':'idle';
+    $('lc-fc').textContent=door&&temp>6?'may pass 8 °C':'no breach';
+  }
+  frame();setInterval(frame,700);
+  // server status (Render's free plan sleeps; tell visitors it is waking up)
+  async function ping(n=0){
+    try{const r=await fetch('/health',{cache:'no-store'});if(!r.ok) throw 0;$('server-state').textContent='server online';$('server-state').parentElement.classList.add('ok');}
+    catch{$('server-state').textContent='server waking up…';if(n<20) setTimeout(()=>ping(n+1),3000);}
+  }
+  ping();
+})();
+function REDUCED_FRONT(){return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;}
+
+/* ---------- micro-interactions ---------- */
+// Ripple from the pointer on buttons; purely visual, no effect on behaviour.
+document.addEventListener('pointerdown',e=>{
+  const b=e.target.closest('.btn,.mini-btn,.cred-card,.nav-link,.seg-btn,.fchip,.attack-btn,.ctl-btn,.auth-tab,.icon-btn');
+  if(!b || b.disabled || REDUCED_FRONT()) return;
+  const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height)*1.4;
+  const s=document.createElement('span');s.className='ripple';
+  s.style.width=s.style.height=`${d}px`;s.style.left=`${e.clientX-r.left-d/2}px`;s.style.top=`${e.clientY-r.top-d/2}px`;
+  b.appendChild(s);setTimeout(()=>s.remove(),650);
+});
+function moveNavIndicator(){
+  const ind=$('nav-indicator'),act=document.querySelector('.nav-link.active');
+  if(!ind||!act||act.offsetParent===null){if(ind) ind.style.opacity=0;return;}
+  ind.style.opacity=1;
+  ind.style.transform=`translate(${act.offsetLeft}px,${act.offsetTop}px)`;
+  ind.style.width=`${act.offsetWidth}px`;ind.style.height=`${act.offsetHeight}px`;
+}
+window.addEventListener('resize',()=>requestAnimationFrame(moveNavIndicator));
 
 function applyRoleVisibility(){
   const demo=!!state.data?.demo;
@@ -225,6 +355,7 @@ function logout(){
   $('app-shell').classList.add('hidden');
   $('login-screen').classList.remove('hidden');
   $('login-password').value='';
+  showAuth('signin');$('login-error').textContent='';
 }
 $('logout-btn').addEventListener('click',()=>{logout();toast('Signed out.');});
 
@@ -247,6 +378,8 @@ function setPage(page,push=true){
   $$('[data-page]').forEach(btn=>{const on=btn.dataset.page===page;btn.classList.toggle('active',on);btn.setAttribute('aria-current',on?'page':'false');});
   const [crumb,title]=PAGE_META[page];
   $('page-title').textContent=crumb;$('current-breadcrumb').textContent=title;
+  requestAnimationFrame(moveNavIndicator);
+  document.querySelector('.nav-link.active')?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'smooth'});
   document.title=`${crumb} · ColdChain`;
   if(page==='hardware' && window.HW) HW.show();
   if(push && location.hash!=='#'+page) history.replaceState(null,'','#'+page);
@@ -275,6 +408,8 @@ document.addEventListener('keydown',e=>{
   if(idx>=1 && idx<=visible.length){setPage(visible[idx-1]);e.preventDefault();}
   else if(e.key==='/'){setPage('inventory');setTimeout(()=>$('inv-search').focus(),50);e.preventDefault();}
   else if(e.key==='r'||e.key==='R'){refresh(true);}
+  else if(e.key==='t'||e.key==='T'){toggleTheme();}
+  else if(state.page==='hardware' && window.HW) HW.key(e);
 });
 
 setInterval(()=>{$('clock').textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
@@ -369,7 +504,7 @@ function chartSvg(fid,rows,cls,forecast){
   const t0=new Date(sampled[0].observed_at).getTime(), t1=new Date(sampled.at(-1).observed_at).getTime();
   const x=t=>CH.l+((t-t0)/Math.max(t1-t0,1))*histW;
   const y=v=>CH.t+(1-(v-lo)/(hi-lo))*(CH.h-CH.t-CH.b);
-  const color=cls==='danger'?'#ef4444':cls==='warning'?'#f59e0b':'#14b8a6';
+  const color=cls==='danger'?'var(--bad)':cls==='warning'?'var(--warn)':'var(--accent)';
   // Split at telemetry gaps (> 60 s) so missing data is shown as missing, not as a straight line.
   const segs=[];let cur=[];
   sampled.forEach((r,i)=>{if(i&&new Date(r.observed_at)-new Date(sampled[i-1].observed_at)>60000){segs.push(cur);cur=[];}cur.push(r);});
@@ -389,8 +524,8 @@ function chartSvg(fid,rows,cls,forecast){
   if(fc!=null){
     const fx=CH.l+plotW, fy=y(fc), warn=fc>8;
     fcSvg=`<rect x="${lastX.toFixed(1)}" y="${CH.t}" width="${(fx-lastX).toFixed(1)}" height="${CH.h-CH.t-CH.b}" class="fc-zone"/>
-      <line x1="${lastX.toFixed(1)}" y1="${lastY.toFixed(1)}" x2="${fx.toFixed(1)}" y2="${fy.toFixed(1)}" stroke="${warn?'#ef4444':'#6366f1'}" stroke-width="2.4" stroke-dasharray="6 5"/>
-      <circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="5" fill="#fff" stroke="${warn?'#ef4444':'#6366f1'}" stroke-width="2.5"/>
+      <line x1="${lastX.toFixed(1)}" y1="${lastY.toFixed(1)}" x2="${fx.toFixed(1)}" y2="${fy.toFixed(1)}" class="fc-line ${warn?'warn':''}"/>
+      <circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="5" class="fc-dot ${warn?'warn':''}"/>
       <text x="${(fx-6).toFixed(1)}" y="${(fy+(fy<CH.t+20?18:-10)).toFixed(1)}" text-anchor="end" class="fc-label ${warn?'warn':''}">AI +30m ${fc.toFixed(1)}°</text>
       <text x="${fx.toFixed(1)}" y="${CH.h-6}" text-anchor="end" class="axis">+30 min</text>`;
   }
@@ -401,10 +536,10 @@ function chartSvg(fid,rows,cls,forecast){
     <line x1="${CH.l}" x2="${CH.w-CH.r}" y1="${y(8).toFixed(1)}" y2="${y(8).toFixed(1)}" class="limit hi"/>
     <line x1="${CH.l}" x2="${CH.w-CH.r}" y1="${y(2).toFixed(1)}" y2="${y(2).toFixed(1)}" class="limit lo"/>
     ${gaps.map(([a,b])=>{const xa=x(new Date(a.observed_at).getTime()),xb=x(new Date(b.observed_at).getTime());return `<rect x="${xa.toFixed(1)}" y="${CH.t}" width="${Math.max(1,xb-xa).toFixed(1)}" height="${CH.h-CH.t-CH.b}" class="gap-band"/>${xb-xa>46?`<text x="${((xa+xb)/2).toFixed(1)}" y="${CH.t+14}" text-anchor="middle" class="axis">no data</text>`:''}`;}).join('')}
-    ${segs.map(seg=>{const l=ptsOf(seg);return `<polygon points="${x(new Date(seg[0].observed_at).getTime()).toFixed(1)},${y(lo)} ${l} ${x(new Date(seg.at(-1).observed_at).getTime()).toFixed(1)},${y(lo)}" fill="${color}" opacity=".12"/><polyline points="${l}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;}).join('')}
+    ${segs.map(seg=>{const l=ptsOf(seg);return `<polygon points="${x(new Date(seg[0].observed_at).getTime()).toFixed(1)},${y(lo)} ${l} ${x(new Date(seg.at(-1).observed_at).getTime()).toFixed(1)},${y(lo)}" style="fill:${color}" opacity=".13"/><polyline points="${l}" class="ln" style="stroke:${color}"/>`;}).join('')}
     ${fcSvg}
     <line x1="${lastX.toFixed(1)}" x2="${lastX.toFixed(1)}" y1="${CH.t}" y2="${CH.h-CH.b}" class="now-line"/>
-    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="5" fill="${color}" stroke="#fff" stroke-width="2" class="pulse-dot"/>
+    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="5" style="fill:${color}" class="pulse-dot"/>
     <text x="${CH.l}" y="${CH.h-6}" class="axis">${fmtAxis(t0)}</text>
     <text x="${lastX.toFixed(1)}" y="${CH.h-6}" text-anchor="${fc==null?'end':'middle'}" class="axis">now</text>
     <line class="hover-line hidden" x1="0" x2="0" y1="${CH.t}" y2="${CH.h-CH.b}"/>
@@ -1069,9 +1204,13 @@ async function loadUsers(){
   if(!isRole('Admin')) return;
   try{
     const users=await api('/api/admin/users');
-    setHTML($('user-list'),`<table class="mini-table users"><thead><tr><th>User</th><th>Role</th><th>Status</th></tr></thead><tbody>${users.map(u=>{
+    const pending=users.filter(u=>u.requested_role);
+    $('req-tag').textContent=pending.length?`${pending.length} pending request${pending.length>1?'s':''}`:'no pending requests';
+    $('req-tag').classList.toggle('warn',!!pending.length);
+    setHTML($('user-list'),`<table class="mini-table users"><thead><tr><th>User</th><th>Role</th><th>Status</th></tr></thead><tbody>${users.sort((a,b)=>(b.requested_role?1:0)-(a.requested_role?1:0)).map(u=>{
       const self=u.username===state.user.username;
-      return `<tr><td><span class="avatar sm">${esc(u.username.slice(0,2).toUpperCase())}</span> <b>${esc(u.username)}</b>${self?' <small>(you)</small>':''}</td>
+      const req=u.requested_role?`<div class="req-row"><span class="req-badge">requests ${esc(u.requested_role)}</span><button class="mini-btn ok" data-approve="${u.id}" data-role="${esc(u.requested_role)}">${icon('check')}Approve</button></div>`:'';
+      return `<tr class="${u.requested_role?'row-req':''}"><td><span class="avatar sm">${esc(u.username.slice(0,2).toUpperCase())}</span> <b>${esc(u.username)}</b>${self?' <small>(you)</small>':''}${req}</td>
       <td><select class="role-select" data-user="${u.id}" ${self?'disabled':''} aria-label="Role for ${esc(u.username)}">${['Admin','Pharmacist','Inspector'].map(r=>`<option ${r===u.role?'selected':''}>${r}</option>`).join('')}</select></td>
       <td><button class="toggle ${u.enabled?'on':''}" data-user-toggle="${u.id}" data-enabled="${u.enabled?1:0}" ${self?'disabled':''} role="switch" aria-checked="${!!u.enabled}" aria-label="Enable ${esc(u.username)}"></button> <small>${u.enabled?'Active':'Disabled'}</small></td></tr>`;}).join('')}</tbody></table>`);
   }catch(err){toast(err.message,'error');}
@@ -1082,6 +1221,17 @@ document.addEventListener('change',async e=>{
   catch(err){toast(err.message,'error');}
   loadUsers();
 });
+document.addEventListener('click',async e=>{
+  const ap=e.target.closest('[data-approve]');if(!ap) return;
+  ap.disabled=true;
+  try{await api(`/api/admin/users/${ap.dataset.approve}`,{method:'PATCH',body:JSON.stringify({role:ap.dataset.role})});toast(`Approved as ${ap.dataset.role}.`,'success');}
+  catch(err){toast(err.message,'error');}
+  loadUsers();refreshRequests();
+});
+async function refreshRequests(){
+  if(!isRole('Admin')) return;
+  try{const n=(await api('/api/admin/users')).filter(u=>u.requested_role).length;$('req-pill').textContent=n;$('req-pill').classList.toggle('hidden',!n);}catch{}
+}
 document.addEventListener('click',async e=>{
   const t=e.target.closest('[data-user-toggle]');if(!t) return;
   try{await api(`/api/admin/users/${t.dataset.userToggle}`,{method:'PATCH',body:JSON.stringify({enabled:t.dataset.enabled!=='1'})});toast('Account updated.','success');}
@@ -1210,6 +1360,7 @@ async function refresh(manual=false,force=false){
     if(window.HW) HW.update(data);
     if(state.page==='lab') loadControls();
     if(state.page==='security') loadRejections();
+    refreshRequests();
     if(manual) toast('Dashboard refreshed.','success');
   }catch(err){
     $('connection-status').textContent='Connection lost';
@@ -1225,7 +1376,6 @@ async function markOperationMode(){
     const details=await response.json();
     if(details.demo===false){
       $('demo-cred-list').classList.add('hidden');
-      $('manual-login').open=true;
       $('login-title').textContent='On-site hardware sign in';
       $('login-subtitle').textContent='Use your Admin, Pharmacist or Inspector credentials.';
       $('login-mode-notice').innerHTML='<strong>Live hardware mode:</strong> simulation controls are disabled. Read private passwords from ONSITE_PRIVATE_CREDENTIALS.txt on this PC. Hackathon prototype, not certified medical monitoring.';

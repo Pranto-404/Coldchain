@@ -1,6 +1,6 @@
-# COLDCHAIN V11
+# COLDCHAIN V12
 
-**Live demo:** https://coldchain-monitor-30qu.onrender.com — new interactive **Hardware** page (ESP32 node, wiring, MQTT packets, thermostat), redesigned interface, 38 tests passing. See `docs/V11_CHANGES.md`, then `docs/V10_CHANGES.md` for the earlier audit fixes.
+**Live demo:** https://coldchain-monitor-30qu.onrender.com — create an account or enter as a demo role, switch dark/light mode, and operate the ESP32 node by hand on the **Hardware** page. See `docs/V12_CHANGES.md` (then `V11_CHANGES.md`, `V10_CHANGES.md`). 41 tests passing.
 
 ---
 

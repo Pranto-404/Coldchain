@@ -108,6 +108,10 @@ class Simulator:
             s=self.states[fid]
             if not s['compressor']:s['temp']=max(s['temp'],7.0);s['last_off']=min(s['last_off'],time.monotonic()-MIN_OFF_S)
 
+    def set_temperature(self,fid,temp):
+        with self.lock:
+            before=self.states[fid]['temp'];self.states[fid]['temp']=float(temp);return before
+
     def reset(self):
         """Return both twins to normal operation."""
         from .db import transaction,append_audit

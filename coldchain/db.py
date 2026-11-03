@@ -42,6 +42,9 @@ def initialize():
         CREATE TABLE IF NOT EXISTS simulation_controls(fridge_id TEXT PRIMARY KEY REFERENCES fridges(id), door_open INTEGER DEFAULT 0, mains_ok INTEGER DEFAULT 1, degraded INTEGER DEFAULT 0, wifi_ok INTEGER DEFAULT 1, heat_spike INTEGER DEFAULT 0);
         CREATE TABLE IF NOT EXISTS alert_outbox(id INTEGER PRIMARY KEY, at TEXT NOT NULL, fridge_id TEXT, channel TEXT NOT NULL, status TEXT NOT NULL, detail TEXT NOT NULL);
         ''')
+        # V12 migration: pending role requests from self-registered users.
+        if 'requested_role' not in [r['name'] for r in c.execute('PRAGMA table_info(users)')]:
+            c.execute('ALTER TABLE users ADD COLUMN requested_role TEXT')
         for fid,label in [('FRIDGE_A','Fridge Alpha'),('FRIDGE_B','Fridge Beta')]:
             c.execute('INSERT OR IGNORE INTO fridges(id,label) VALUES(?,?)',(fid,label))
             c.execute('INSERT OR IGNORE INTO simulation_controls(fridge_id) VALUES(?)',(fid,))

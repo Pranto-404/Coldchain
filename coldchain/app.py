@@ -54,8 +54,15 @@ class Attack(BaseModel):
     fridge_id:str='FRIDGE_A'
 class Tamper(BaseModel):
     action:Literal['tamper','restore']
+USERNAME_PATTERN=r'^[A-Za-z0-9._@+-]{3,60}$'
+class Register(BaseModel):
+    username:str=Field(pattern=USERNAME_PATTERN)
+    password:str=Field(min_length=8,max_length=150)
+    requested_role:Literal['Inspector','Pharmacist']='Inspector'
+class Probe(BaseModel):
+    temp_c:float=Field(ge=-2,le=24)
 class UserCreate(BaseModel):
-    username:str=Field(min_length=3,max_length=40)
+    username:str=Field(pattern=USERNAME_PATTERN)
     password:str=Field(min_length=8,max_length=150)
     role:str
 class Relocation(BaseModel):
@@ -142,13 +149,38 @@ def login(d:Login,request:Request):
     hits=[x for x in failures.get(key,[]) if time.time()-x<600]
     if len(hits)>=10:raise HTTPException(429,'Too many attempts; try again in 10 minutes')
     if len(failures)>5000:failures.clear()
-    c=connect(); u=c.execute('SELECT * FROM users WHERE username=? AND enabled=1',(d.username,)).fetchone(); c.close()
+    c=connect(); u=c.execute('SELECT * FROM users WHERE lower(username)=lower(?) AND enabled=1',(d.username.strip(),)).fetchone(); c.close()
     if not u or not check_password(d.password,u['password_hash']):
         failures[key]=hits+[time.time()]
         raise HTTPException(401,'Invalid username or password')
     failures.pop(key,None)
+    return issue_token(u)
+
+def issue_token(u):
     token=jwt.encode({'sub':str(u['id']),'role':u['role'],'exp':datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(hours=6)},jwt_secret(),algorithm=JWT_ALGO)
     return {'access_token':token,'token_type':'bearer','role':u['role'],'username':u['username']}
+
+registrations={}
+@app.post('/api/auth/register',status_code=201)
+def register(d:Register,request:Request):
+    """Self sign-up. New accounts are always read-only Inspectors; asking for Pharmacist only records a
+    request that an Admin approves. Roles are never chosen by the person registering."""
+    if os.getenv('ALLOW_REGISTRATION','1')!='1':raise HTTPException(403,'Self registration is disabled')
+    ip=client_ip(request)
+    recent=[x for x in registrations.get(ip,[]) if time.time()-x<3600]
+    if len(recent)>=5:raise HTTPException(429,'Too many new accounts from this network; try again later')
+    if len(registrations)>5000:registrations.clear()
+    name=d.username.strip()
+    try:
+        with transaction() as c:
+            if c.execute('SELECT 1 FROM users WHERE lower(username)=lower(?)',(name,)).fetchone():raise HTTPException(409,'That username is taken')
+            requested='Pharmacist' if d.requested_role=='Pharmacist' else None
+            c.execute('INSERT INTO users(username,password_hash,role,requested_role) VALUES(?,?,?,?)',(name,hash_password(d.password),'Inspector',requested))
+            append_audit(c,name,'user_registered',{'username':name,'role':'Inspector','requested_role':requested})
+            u=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
+    except sqlite3.IntegrityError as ex:raise HTTPException(409,'That username is taken') from ex
+    registrations[ip]=recent+[time.time()]
+    return issue_token(u)
 
 @app.get('/api/me')
 def me(a=Depends(actor)):return a
@@ -360,7 +392,7 @@ def export_csv(a=Depends(actor)):
 
 @app.get('/api/admin/users')
 def list_users(a=Depends(require('Admin'))):
-    c=connect();rows=[dict(r) for r in c.execute('SELECT id,username,role,enabled FROM users ORDER BY id')];c.close();return rows
+    c=connect();rows=[dict(r) for r in c.execute('SELECT id,username,role,enabled,requested_role FROM users ORDER BY id')];c.close();return rows
 
 @app.patch('/api/admin/users/{user_id}')
 def update_user(user_id:int,data:UserUpdate,a=Depends(require('Admin'))):
@@ -371,7 +403,8 @@ def update_user(user_id:int,data:UserUpdate,a=Depends(require('Admin'))):
         u=c.execute('SELECT * FROM users WHERE id=?',(user_id,)).fetchone()
         if not u:raise HTTPException(404,'User not found')
         for k,v in changes.items():c.execute(f'UPDATE users SET {k}=? WHERE id=?',(int(v) if isinstance(v,bool) else v,user_id))
-        append_audit(c,a['username'],'user_updated',{'username':u['username'],'changes':changes})
+        if 'role' in changes:c.execute('UPDATE users SET requested_role=NULL WHERE id=?',(user_id,))
+        append_audit(c,a['username'],'user_updated',{'username':u['username'],'changes':changes,'request_was':u['requested_role']})
     return {'ok':True}
 
 @app.post('/api/admin/users',status_code=201)
@@ -515,6 +548,18 @@ def simulate_attack(data:Attack,a=Depends(require('Admin','Pharmacist'))):
     except ValueError as e:
         outcome='rejected';reason=str(e)
     return {'kind':data.kind,'outcome':outcome,'reason':reason}
+
+@app.post('/api/simulator/{fid}/probe')
+def sim_probe(fid:str,data:Probe,a=Depends(require('Admin','Pharmacist'))):
+    """Manual operation: hold an ice pack or a warm hand to the simulated probe."""
+    _demo_only()
+    if fid not in ('FRIDGE_A','FRIDGE_B'):raise HTTPException(404,'Unknown fridge')
+    if not simulator_service:raise HTTPException(503,'Simulator is not running')
+    before=simulator_service.set_temperature(fid,data.temp_c)
+    with transaction() as c:
+        append_audit(c,a['username'],'simulation_probe_set',{'fridge':fid,'from_c':round(before,2),'to_c':data.temp_c,'demo_only':True})
+    simulator_service.publish_now()
+    return {'ok':True,'temp_c':data.temp_c}
 
 @app.post('/api/simulator/reset')
 def simulator_reset(a=Depends(require('Admin','Pharmacist'))):

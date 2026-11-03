@@ -157,3 +157,43 @@ def test_hardware_view_assets_and_font_policy(demo):
     assert '/static/hardware.js' in page.text and 'page-hardware' in page.text
     csp=page.headers['content-security-policy']
     assert 'https://fonts.gstatic.com' in csp and "script-src 'self'" in csp
+
+
+def test_self_registration_is_read_only_until_admin_approves(demo):
+    from coldchain import app as appmod
+    appmod.registrations.clear()
+    r=demo.post('/api/auth/register',json={'username':'Nurse.Rahim@clinic.bd','password':'GoodPass123','requested_role':'Pharmacist'})
+    assert r.status_code==201,r.text
+    assert r.json()['role']=='Inspector'
+    nurse={'Authorization':'Bearer '+r.json()['access_token']}
+    data={'name':'X Vaccine','lot':'LOT-REG-1','expires':'2028-01-01','fridge_id':'FRIDGE_A'}
+    assert demo.post('/api/batches',json=data,headers=nurse).status_code==403
+    # role can't be chosen directly, duplicate names are refused case-insensitively
+    assert demo.post('/api/auth/register',json={'username':'evil','password':'GoodPass123','requested_role':'Admin'}).status_code==422
+    assert demo.post('/api/auth/register',json={'username':'nurse.rahim@clinic.bd','password':'GoodPass123'}).status_code==409
+    assert demo.post('/api/auth/register',json={'username':'a b','password':'GoodPass123'}).status_code==422
+    admin=login(demo,'admin')
+    u=next(x for x in demo.get('/api/admin/users',headers=admin).json() if x['username']=='Nurse.Rahim@clinic.bd')
+    assert u['requested_role']=='Pharmacist'
+    assert demo.patch(f"/api/admin/users/{u['id']}",json={'role':'Pharmacist'},headers=admin).status_code==200
+    assert demo.post('/api/batches',json=data,headers=nurse).status_code==201
+    assert next(x for x in demo.get('/api/admin/users',headers=admin).json() if x['id']==u['id'])['requested_role'] is None
+    # login is case-insensitive on the username
+    assert demo.post('/api/auth/login',json={'username':'NURSE.RAHIM@CLINIC.BD','password':'GoodPass123'}).status_code==200
+
+
+def test_registration_rate_limit(demo):
+    from coldchain import app as appmod
+    appmod.registrations.clear()
+    for i in range(5):
+        assert demo.post('/api/auth/register',json={'username':f'user{i}x','password':'GoodPass123'}).status_code==201
+    assert demo.post('/api/auth/register',json={'username':'user9x','password':'GoodPass123'}).status_code==429
+
+
+def test_manual_probe_control(demo):
+    pharm=login(demo,'pharmacist');insp=login(demo,'inspector')
+    assert demo.post('/api/simulator/FRIDGE_A/probe',json={'temp_c':9.5},headers=insp).status_code==403
+    assert demo.post('/api/simulator/FRIDGE_A/probe',json={'temp_c':99},headers=pharm).status_code==422
+    assert demo.post('/api/simulator/FRIDGE_A/probe',json={'temp_c':9.5},headers=pharm).status_code==200
+    f=demo.get('/api/dashboard',headers=pharm).json()['fridges'][0]
+    assert f['temp_c']==9.5

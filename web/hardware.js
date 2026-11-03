@@ -13,14 +13,16 @@
   const hw={fid:'FRIDGE_A',built:null,prev:{},controls:{},serial:[],sceneEl:null,visible:false};
 
   function interior(t){
-    // cold blue -> neutral -> warm as the cabinet heats up
-    if(t==null) return '#e7eaee';
-    const stops=[[0,[198,222,255]],[4,[226,238,252]],[8,[246,240,226]],[12,[250,214,204]],[20,[246,190,180]]];
+    // cold blue -> neutral -> warm as the cabinet heats up (darker set in dark mode)
+    const dark=document.documentElement.dataset.theme==='dark';
+    if(t==null) return dark?'#1b2029':'#e7eaee';
+    const stops=dark?[[0,[24,46,84]],[4,[28,40,62]],[8,[50,44,36]],[12,[78,40,34]],[20,[98,36,30]]]
+                    :[[0,[198,222,255]],[4,[226,238,252]],[8,[246,240,226]],[12,[250,214,204]],[20,[246,190,180]]];
     for(let i=1;i<stops.length;i++){
       const [a,ca]=stops[i-1],[b,cb]=stops[i];
       if(t<=b){const k=Math.max(0,(t-a)/(b-a));return `rgb(${ca.map((c,j)=>Math.round(c+(cb[j]-c)*k)).join(',')})`;}
     }
-    return 'rgb(246,190,180)';
+    return dark?'rgb(98,36,30)':'rgb(246,190,180)';
   }
 
   function sceneSvg(f,batches){
@@ -72,7 +74,7 @@
     <g class="comp-bay">
       <rect x="30" y="380" width="250" height="90" rx="0" class="bay"/>
       <rect x="30" y="380" width="250" height="90" fill="url(#vent)" opacity=".5"/>
-      <rect x="58" y="398" width="76" height="56" rx="12" class="comp-drum"/>
+      <rect x="58" y="398" width="76" height="56" rx="12" class="comp-drum" id="hw-comp" tabindex="0" role="button" aria-label="Compressor: toggle weak compressor"><title>Click to weaken / restore the compressor</title></rect>
       <text x="96" y="430" text-anchor="middle" class="part-txt">COMPRESSOR</text>
       <circle cx="210" cy="426" r="32" class="fan-ring"/>
       <g id="hw-fan" class="fan-blades"><path d="M210 426 C200 404 216 398 222 404 C226 410 218 420 210 426 Z"/><path d="M210 426 C232 416 238 432 232 438 C226 442 216 434 210 426 Z"/><path d="M210 426 C220 448 204 454 198 448 C194 442 202 432 210 426 Z"/><path d="M210 426 C188 436 182 420 188 414 C194 410 204 418 210 426 Z"/><circle cx="210" cy="426" r="4"/></g>
@@ -166,6 +168,7 @@
     bind('hw-door',()=>toggle('door_open',!f_now().door_open,'Door'));
     bind('hw-btn',()=>toggle('mains_ok',!f_now().mains_ok,'Mains'));
     bind('hw-wifi',()=>toggle('wifi_ok',!(hw.controls.wifi_ok??1),'Wi-Fi'));
+    bind('hw-comp',()=>toggle('degraded',!(hw.controls.degraded??0),'Compressor'));
     hw.sceneEl=host.querySelector('svg');
   }
   const f_now=()=>state.data.fridges.find(x=>x.id===hw.fid);
@@ -175,7 +178,10 @@
     if(!canEdit()){toast('Inspectors have read-only access.','info');return;}
     try{
       await api(`/api/simulator/${hw.fid}/control`,{method:'POST',body:JSON.stringify({[key]:!!value})});
-      serial(`# operator: ${label} → ${key==='mains_ok'?(value?'mains restored':'mains FAILED'):key==='wifi_ok'?(value?'wifi up':'wifi DOWN'):(value?'door OPEN':'door closed')}`,'op');
+      const said={mains_ok:value?'mains restored':'mains FAILED',wifi_ok:value?'wifi up':'wifi DOWN',door_open:value?'door OPEN':'door closed',
+        degraded:value?'compressor WEAKENED':'compressor healthy',heat_spike:value?'heat load ON':'heat load off'}[key];
+      serial(`# operator: ${label} → ${said}`,'op');
+      toast(`${label}: ${said.toLowerCase()}`,'success');
       await loadControls();await refresh(false,true);
     }catch(err){toast(err.message,'error');}
   }
@@ -208,6 +214,49 @@
     out.innerHTML=hw.serial.map(x=>`<span class="${x.kind}">${esc(x.line)}</span>`).join('\n');
     out.scrollTop=out.scrollHeight;
   }
+
+  // [control key, label, icon, text when value is 1, text when 0, value that counts as a fault]
+  const CTRLS=[
+    ['door_open','Door','door','open','closed',1],
+    ['mains_ok','Mains power','plug','on','failed',0],
+    ['wifi_ok','Wi-Fi','wifi','connected','down',0],
+    ['degraded','Compressor','fan','weak','healthy',1],
+    ['heat_spike','Heat load','heat','on','off',1],
+  ];
+  const canOperate=()=>!!state.data?.demo && canEdit();
+  function renderCtl(f){
+    const c=hw.controls,ok=canOperate();
+    setText('ctl-mode',!state.data?.demo?'live node':ok?'simulated · you can operate':'read-only');
+    setHTML($('ctl-grid'),CTRLS.map(([k,label,ic,on,off,fault])=>{
+      const v=c[k]!=null?+c[k]:(k==='door_open'?+f.door_open:k==='mains_ok'?+f.mains_ok:k==='wifi_ok'?+!f.buffered:0);
+      const bad=v===fault;
+      return `<button class="ctl-btn ${bad?'fault':''} ${v?'on':''}" data-ctl="${k}" data-v="${v}" aria-pressed="${!!v}" ${ok?'':'disabled'} title="${esc(label)}: ${v?on:off}">
+        <span class="ctl-ic">${icon(ic,k==='degraded'&&f.compressor_on?'spin':'')}</span><span class="ctl-txt"><b>${esc(label)}</b><small>${v?on:off}</small></span><span class="ctl-sw"><i></i></span></button>`;
+    }).join(''));
+    const r=$('probe-range');
+    if(!hw.dragging && f.temp_c!=null){r.value=f.temp_c;setText('probe-val',`${Number(f.temp_c).toFixed(1)} °C`);}
+    r.disabled=!ok;$$('[data-nudge]').forEach(b=>b.disabled=!ok);
+    r.style.setProperty('--fill',`${(Math.max(0,Math.min(15,Number(r.value)))/15*100).toFixed(1)}%`);
+  }
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('.ctl-btn');if(!b||b.disabled) return;
+    const k=b.dataset.ctl,label=b.querySelector('b').textContent;
+    b.classList.add('pending');
+    toggle(k,b.dataset.v!=='1',label).finally(()=>b.classList.remove('pending'));
+  });
+  async function setProbe(t){
+    if(!canOperate()) return;
+    t=Math.max(0,Math.min(15,Math.round(t*10)/10));
+    try{
+      await api(`/api/simulator/${hw.fid}/probe`,{method:'POST',body:JSON.stringify({temp_c:t})});
+      serial(`# operator: probe held at ${t.toFixed(1)} °C`,'op');
+      await refresh(false,true);
+    }catch(err){toast(err.message,'error');}
+  }
+  const range=$('probe-range');
+  range.addEventListener('input',()=>{hw.dragging=true;setText('probe-val',`${Number(range.value).toFixed(1)} °C`);range.style.setProperty('--fill',`${(range.value/15*100).toFixed(1)}%`);});
+  range.addEventListener('change',async()=>{await setProbe(Number(range.value));hw.dragging=false;});
+  $$('[data-nudge]').forEach(b=>b.addEventListener('click',()=>{const f=f_now();if(f) setProbe((f.temp_c??5)+Number(b.dataset.nudge));}));
 
   function fsm(f){
     const c=hw.controls;let st='idle';
@@ -301,7 +350,7 @@
     hw.prev={seq:f.last_seq,door:f.door_open,mains:f.mains_ok,comp:f.compressor_on,buffered:q,buzz:buzzer};
     if(newSeq>0||!hw.serial.length) serial(`NODE=${f.id} TEMP=${Number(f.temp_c??0).toFixed(2)} DOOR=${+f.door_open} POWER=${+f.mains_ok} COMP=${+f.compressor_on} BAT=${f.battery_pct} REDLATCH=${+!!f.red_latch} QUEUE=${q} MQTT=${+wifiOk}`,'dim');
 
-    fsm(f);pins(f,st,redLed,greenLed,buzzer);
+    fsm(f);pins(f,st,redLed,greenLed,buzzer);renderCtl(f);
     $('hw-hint').innerHTML=!state.data.demo?'Live node: the drawing mirrors the physical ESP32.':canEdit()?'Click the <b>door</b>, the <b>mains-fail button</b> or the <b>antenna</b> to change the node.':'Read-only view. Pharmacists and admins can operate the simulated node.';
   }
 
@@ -317,6 +366,12 @@
       hw.visible=state.page==='hardware';
       if(!hw.visible) return;
       await loadControls();update();
+    },
+    key(e){
+      const map={d:'door_open',p:'mains_ok',w:'wifi_ok',c:'degraded',h:'heat_spike'};
+      const k=map[e.key.toLowerCase()];if(!k) return;
+      const b=document.querySelector(`.ctl-btn[data-ctl="${k}"]`);
+      if(b&&!b.disabled){e.preventDefault();b.click();b.classList.add('flash');setTimeout(()=>b.classList.remove('flash'),400);}
     },
   };
 })();

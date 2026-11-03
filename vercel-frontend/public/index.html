@@ -1,85 +1,123 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#15171c">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0e13" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f1ed" media="(prefers-color-scheme: light)">
 <meta name="description" content="ColdChain — vaccine and medicine storage monitor: ESP32 fridge nodes, heat-exposure budgets, signed telemetry and 30-minute breach forecasts.">
 <title>ColdChain · Vaccine storage monitor</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2315171c'/%3E%3Cpath d='M32 12v40M14.7 22l34.6 20M14.7 42l34.6-20' stroke='%237fb2ff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b0e13'/%3E%3Cpath d='M32 12v40M14.7 22l34.6 20M14.7 42l34.6-20' stroke='%237aa7ff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/static/styles.css?v=11.0">
-<script src="/static/app.js?v=11.0" defer></script>
-<script src="/static/hardware.js?v=11.0" defer></script>
+<link rel="stylesheet" href="/static/styles.css?v=12.0">
+<script src="/static/theme.js?v=12.0"></script>
+<script src="/static/app.js?v=12.0" defer></script>
+<script src="/static/hardware.js?v=12.0" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
 
-<!-- ============ SIGN IN ============ -->
+<!-- ============ FRONT PAGE ============ -->
 <div id="login-screen" class="login-shell">
-  <section class="login-left">
-    <div class="wordmark"><span class="mark" data-ic="snow"></span>ColdChain</div>
-    <h1>Vaccines stay potent between <em>2&nbsp;and&nbsp;8&nbsp;°C</em>. This watches every minute they don't.</h1>
-    <figure class="trace" aria-hidden="true">
-      <svg viewBox="0 0 520 170" preserveAspectRatio="none">
-        <rect class="band" x="0" y="44" width="520" height="86"/>
-        <line class="lim" x1="0" x2="520" y1="44" y2="44"/><line class="lim lo" x1="0" x2="520" y1="130" y2="130"/>
-        <text x="6" y="38">8 °C</text><text x="6" y="146">2 °C</text>
-        <path class="line" d="M0 98 C30 96 40 70 70 66 S110 110 140 104 S180 70 210 68 S250 108 280 104 S320 72 345 64 S360 40 375 28 S400 34 410 56 S440 104 470 100 S510 74 520 72"/>
-        <circle class="blip" r="4" cx="375" cy="28"/>
-      </svg>
-      <figcaption><span class="dot-bad"></span> Door left open · heat budget used: 4 of 60 weighted minutes</figcaption>
-    </figure>
-    <dl class="spec">
-      <div><dt>Nodes</dt><dd>2 × ESP32 · DS18B20 · reed switch · relay · OLED</dd></div>
-      <div><dt>Thermostat</dt><dd>on ≥ 7 °C · off ≤ 3 °C · 60 s minimum off</dd></div>
-      <div><dt>Heat budget</dt><dd>60 min above 8 °C · above 12 °C counts double</dd></div>
-      <div><dt>Telemetry</dt><dd>MQTT every 5 s · HMAC-SHA256 · nonce · 30 min offline buffer</dd></div>
-      <div><dt>Records</dt><dd>SHA-256 hash chain · verify on demand</dd></div>
-      <div><dt>Forecast</dt><dd>temperature 30 min ahead · compressor health 0–100</dd></div>
-    </dl>
-  </section>
+  <div class="aurora" aria-hidden="true">
+    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+    <div class="dotgrid"></div>
+    <div class="frost-field" id="frost-field"></div>
+  </div>
 
-  <section class="login-right">
-    <div class="login-panel">
-      <h2 id="login-title">Sign in</h2>
-      <p id="login-subtitle" class="muted">Demo build — pick a role to enter.</p>
-      <div class="role-list" id="demo-cred-list">
-        <button type="button" class="cred-card" data-user="admin" data-pass="ColdChainDemo_Admin2026!">
-          <span class="cred-tag admin">ADM</span>
-          <span class="cred-text"><strong>Administrator</strong><small>Users, latch reset, tamper test</small></span>
-          <span class="cred-go" data-ic="arrow"></span>
-        </button>
-        <button type="button" class="cred-card" data-user="pharmacist" data-pass="ColdChainDemo_Pharmacist2026!">
-          <span class="cred-tag pharmacist">PHA</span>
-          <span class="cred-text"><strong>Pharmacist</strong><small>Stock, moves, confirm relocation</small></span>
-          <span class="cred-go" data-ic="arrow"></span>
-        </button>
-        <button type="button" class="cred-card" data-user="inspector" data-pass="ColdChainDemo_Inspector2026!">
-          <span class="cred-tag inspector">INS</span>
-          <span class="cred-text"><strong>Inspector</strong><small>Read-only: telemetry, audit, integrity</small></span>
-          <span class="cred-go" data-ic="arrow"></span>
-        </button>
-      </div>
-      <details class="manual-login" id="manual-login">
-        <summary>Use a username and password</summary>
-        <form id="login-form" class="stack-form">
-          <label for="login-username">Username</label>
-          <input id="login-username" type="text" autocomplete="username" required>
-          <label for="login-password">Password</label>
-          <div class="pw-wrap">
-            <input id="login-password" type="password" autocomplete="current-password" required>
-            <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password">Show</button>
-          </div>
-          <button class="btn btn-primary btn-block" type="submit">Sign in</button>
-        </form>
-      </details>
-      <div id="login-error" class="error" role="alert"></div>
-      <p class="fineprint" id="login-mode-notice">Demo data is simulated. Prototype for FastRoboX — not a certified medical device.</p>
+  <header class="login-top">
+    <div class="wordmark"><span class="mark" data-ic="snow"></span>ColdChain</div>
+    <div class="login-top-actions">
+      <span class="status-chip"><span class="pulse"></span><span id="server-state">checking server…</span></span>
+      <button class="theme-toggle" data-theme-toggle type="button" aria-label="Switch between dark and light mode"><span class="tt-sun" data-ic="sun"></span><span class="tt-moon" data-ic="moon"></span></button>
     </div>
-  </section>
+  </header>
+
+  <main class="login-main">
+    <section class="hero">
+      <span class="eyebrow reveal"><span class="pulse"></span>FastRoboX · IoT cold chain</span>
+      <h1 class="reveal">Every dose kept between <span class="grad">2 and 8&nbsp;°C</span>.</h1>
+      <p class="lead reveal">Two ESP32 fridge nodes, heat-exposure budgets, signed telemetry, a tamper-evident audit chain and a forecast that warns 30 minutes before a breach.</p>
+
+      <div class="live-card reveal" aria-hidden="true">
+        <div class="lc-head">
+          <span class="lc-title"><span class="dotlive"></span>Fridge Alpha <small>simulated preview</small></span>
+          <span class="lc-state" id="lc-state">SAFE</span>
+        </div>
+        <div class="lc-body">
+          <div class="lc-temp"><b id="lc-temp">4.8</b><span>°C</span></div>
+          <svg class="lc-trace" viewBox="0 0 400 110" preserveAspectRatio="none">
+            <rect class="lc-band" x="0" y="22" width="400" height="66"/>
+            <line class="lc-lim" x1="0" x2="400" y1="22" y2="22"/><line class="lc-lim lo" x1="0" x2="400" y1="88" y2="88"/>
+            <g class="lc-scroll"><path class="lc-line" id="lc-line" d=""/></g>
+            <circle class="lc-dot" id="lc-dot" r="4" cx="400" cy="55"/>
+          </svg>
+        </div>
+        <div class="lc-foot"><span>door <b id="lc-door">closed</b></span><span>compressor <b id="lc-comp">idle</b></span><span>forecast <b id="lc-fc">no breach</b></span></div>
+      </div>
+
+      <div class="hero-stats reveal">
+        <div><b data-count="2">0</b><span>ESP32 nodes</span></div>
+        <div><b data-count="5" data-suffix=" s">0</b><span>telemetry</span></div>
+        <div><b data-count="60" data-suffix=" min">0</b><span>heat budget</span></div>
+        <div><b data-count="30" data-suffix=" min">0</b><span>forecast</span></div>
+      </div>
+    </section>
+
+    <section class="auth-card reveal" aria-label="Sign in or create an account">
+      <div class="auth-tabs" role="tablist">
+        <button type="button" role="tab" class="auth-tab active" data-auth="signin" aria-selected="true">Sign in</button>
+        <button type="button" role="tab" class="auth-tab" data-auth="register" aria-selected="false">Create account</button>
+        <span class="tab-ind" aria-hidden="true"></span>
+      </div>
+
+      <form id="login-form" class="auth-pane" data-pane="signin" novalidate>
+        <h2 id="login-title">Welcome back</h2>
+        <p id="login-subtitle" class="muted">Sign in to monitor your fridges.</p>
+        <label class="field"><span>Username or email</span>
+          <span class="input-wrap"><span data-ic="user"></span><input id="login-username" type="text" autocomplete="username" required></span></label>
+        <label class="field"><span>Password</span>
+          <span class="input-wrap"><span data-ic="lock"></span><input id="login-password" type="password" autocomplete="current-password" required>
+          <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password">Show</button></span></label>
+        <button class="btn btn-primary btn-lg btn-block" type="submit"><span class="btn-label">Sign in</span><span data-ic="arrow"></span></button>
+        <p class="switch-line">New here? <button type="button" class="link-btn" data-auth-go="register">Create an account</button></p>
+      </form>
+
+      <form id="register-form" class="auth-pane hidden" data-pane="register" novalidate>
+        <h2>Create your account</h2>
+        <p class="muted">New accounts get read-only access straight away. An administrator can upgrade you.</p>
+        <label class="field"><span>Username or email</span>
+          <span class="input-wrap"><span data-ic="user"></span><input id="reg-username" type="text" autocomplete="username" required minlength="3" maxlength="60" pattern="[A-Za-z0-9._@+\-]{3,60}"></span>
+          <small class="field-hint">3–60 characters: letters, numbers, . _ - @ +</small></label>
+        <label class="field"><span>Password</span>
+          <span class="input-wrap"><span data-ic="lock"></span><input id="reg-password" type="password" autocomplete="new-password" required minlength="8"></span>
+          <span class="pw-meter" aria-hidden="true"><i id="pw-meter-bar"></i></span><small class="field-hint" id="pw-meter-text">At least 8 characters</small></label>
+        <label class="field"><span>Confirm password</span>
+          <span class="input-wrap"><span data-ic="lock"></span><input id="reg-password2" type="password" autocomplete="new-password" required></span></label>
+        <fieldset class="role-pick">
+          <legend>Access</legend>
+          <label class="role-opt"><input type="radio" name="reqrole" value="Inspector" checked><span><b>Inspector</b><small>Read-only — active immediately</small></span></label>
+          <label class="role-opt"><input type="radio" name="reqrole" value="Pharmacist"><span><b>Pharmacist</b><small>Request — an admin approves</small></span></label>
+        </fieldset>
+        <button class="btn btn-primary btn-lg btn-block" type="submit"><span class="btn-label">Create account</span><span data-ic="arrow"></span></button>
+        <p class="switch-line">Already registered? <button type="button" class="link-btn" data-auth-go="signin">Sign in</button></p>
+      </form>
+
+      <div id="login-error" class="error" role="alert"></div>
+
+      <div class="demo-block" id="demo-cred-list">
+        <div class="divider"><span>or explore the demo as</span></div>
+        <div class="role-buttons">
+          <button type="button" class="cred-card admin" data-user="admin" data-pass="ColdChainDemo_Admin2026!"><span data-ic="shield"></span><b>Admin</b><small>everything</small></button>
+          <button type="button" class="cred-card pharmacist" data-user="pharmacist" data-pass="ColdChainDemo_Pharmacist2026!"><span data-ic="box"></span><b>Pharmacist</b><small>stock &amp; moves</small></button>
+          <button type="button" class="cred-card inspector" data-user="inspector" data-pass="ColdChainDemo_Inspector2026!"><span data-ic="search"></span><b>Inspector</b><small>read-only</small></button>
+        </div>
+      </div>
+      <p class="fineprint" id="login-mode-notice">Demo data is simulated. Prototype for FastRoboX — not a certified medical device.</p>
+    </section>
+  </main>
 </div>
 
 <!-- ============ APP ============ -->
@@ -91,16 +129,17 @@
       <div><b id="facility-name">Demo pharmacy</b><small id="facility-summary">connecting…</small></div>
     </div>
     <nav class="nav-stack" aria-label="Primary">
+      <span class="nav-indicator" id="nav-indicator" aria-hidden="true"></span>
       <button data-page="dashboard" class="nav-link active"><span data-ic="grid"></span><span>Overview</span><kbd>1</kbd></button>
       <button data-page="hardware" class="nav-link"><span data-ic="chip"></span><span>Hardware</span><kbd>2</kbd></button>
       <button data-page="inventory" class="nav-link"><span data-ic="box"></span><span>Inventory</span><span id="inventory-count" class="nav-pill">0</span></button>
       <button data-page="ai" class="nav-link"><span data-ic="spark"></span><span>Forecast</span><span id="ai-pill" class="nav-pill warn hidden">!</span></button>
       <button data-page="security" class="nav-link"><span data-ic="shield"></span><span>Security</span><span id="sec-pill" class="nav-pill warn hidden">0</span></button>
-      <button data-page="users" class="nav-link admin-only"><span data-ic="users"></span><span>Users</span></button>
+      <button data-page="users" class="nav-link admin-only"><span data-ic="users"></span><span>Users</span><span id="req-pill" class="nav-pill warn hidden">0</span></button>
       <button data-page="lab" class="nav-link demo-nav"><span data-ic="flask"></span><span>Scenarios</span></button>
     </nav>
     <div class="sidebar-bottom">
-      <p class="keys"><kbd>1</kbd>–<kbd>7</kbd> pages · <kbd>/</kbd> search · <kbd>R</kbd> refresh</p>
+      <p class="keys"><kbd>1</kbd>–<kbd>7</kbd> pages · <kbd>/</kbd> search · <kbd>R</kbd> refresh · <kbd>T</kbd> theme</p>
       <button class="logout-link" id="logout-btn"><span data-ic="logout"></span>Sign out</button>
     </div>
   </aside>
@@ -114,8 +153,9 @@
       <div class="topbar-actions">
         <div class="sync-pill" id="sync-pill" title="Data refreshes every 5 seconds"><span class="pulse"></span><span id="connection-status">connecting</span></div>
         <div class="clock-pill mono" id="clock">--:--:--</div>
+        <button class="icon-btn theme-toggle" data-theme-toggle type="button" aria-label="Switch between dark and light mode"><span class="tt-sun" data-ic="sun"></span><span class="tt-moon" data-ic="moon"></span></button>
         <div class="bell-wrap">
-          <button class="bell-btn" id="bell-btn" aria-haspopup="true" aria-expanded="false" aria-label="Alerts">
+          <button class="bell-btn icon-btn" id="bell-btn" aria-haspopup="true" aria-expanded="false" aria-label="Alerts">
             <span data-ic="bell"></span><span class="bell-count hidden" id="bell-count">0</span>
           </button>
           <div class="bell-panel hidden" id="bell-panel" role="dialog" aria-label="Active alerts">
@@ -128,12 +168,14 @@
     </header>
 
     <div class="main-content">
-      <div id="demo-notice" class="demo-banner hidden"><b>Simulation</b> — both fridges are software twins of the ESP32 nodes.<span class="demo-nav"> Trigger faults from <button class="link-btn" data-open="lab">Scenarios</button> or click parts on the <button class="link-btn" data-open="hardware">Hardware</button> page.</span></div>
+      <div id="demo-notice" class="demo-banner hidden"><span data-ic="flask"></span><span><b>Simulation</b> — both fridges are software twins of the ESP32 nodes.<span class="demo-nav"> Operate them on the <button class="link-btn" data-open="hardware">Hardware</button> page or run a <button class="link-btn" data-open="lab">Scenario</button>.</span></span></div>
       <div id="critical-banner" class="critical-banner hidden" role="alert"></div>
 
       <!-- OVERVIEW -->
       <section id="page-dashboard" class="page-view">
-        <div id="metrics" class="metrics-grid"></div>
+        <div id="metrics" class="metrics-grid">
+          <div class="metric-card skel"></div><div class="metric-card skel"></div><div class="metric-card skel"></div><div class="metric-card skel"></div><div class="metric-card skel"></div>
+        </div>
         <section class="panel">
           <header class="panel-head">
             <h3><span class="num">01</span>Fridges</h3>
@@ -145,7 +187,7 @@
               </div>
             </div>
           </header>
-          <div id="fridge-grid" class="fridge-grid"></div>
+          <div id="fridge-grid" class="fridge-grid"><div class="fridge-card skel tall"></div><div class="fridge-card skel tall"></div></div>
         </section>
         <div class="two-col">
           <section class="panel">
@@ -166,27 +208,43 @@
             <button class="seg-btn active" data-hw="FRIDGE_A">Node A · Alpha</button>
             <button class="seg-btn" data-hw="FRIDGE_B">Node B · Beta</button>
           </div>
-          <p class="hw-hint" id="hw-hint">Click the <b>door</b>, the <b>mains-fail button</b> or the <b>antenna</b> to change the node.</p>
+          <p class="hw-hint" id="hw-hint">Click the door, the mains-fail button or the antenna — or use the control panel.</p>
         </div>
         <div class="hw-layout">
           <section class="panel hw-stage">
             <div id="hw-scene" class="hw-scene"></div>
           </section>
           <div class="hw-side">
+            <section class="panel ctl-panel">
+              <header class="panel-head"><h3><span data-ic="power" class="h-ic"></span>Manual control</h3><span class="tag mono" id="ctl-mode">simulated</span></header>
+              <div class="ctl-grid" id="ctl-grid"></div>
+              <div class="probe-ctl" id="probe-ctl">
+                <div class="probe-head"><span>Probe temperature</span><output class="mono" id="probe-val">—</output></div>
+                <input type="range" id="probe-range" min="0" max="15" step="0.1" aria-label="Set probe temperature">
+                <div class="probe-scale mono"><span>0</span><span class="lo">2</span><span>7 on</span><span class="hi">8</span><span>15 °C</span></div>
+                <div class="probe-btns">
+                  <button class="btn btn-secondary btn-sm" data-nudge="-2"><span data-ic="snow"></span>Ice pack −2 °C</button>
+                  <button class="btn btn-secondary btn-sm" data-nudge="2"><span data-ic="thermo"></span>Warm hand +2 °C</button>
+                </div>
+              </div>
+              <p class="hint keys-hint"><kbd>D</kbd> door · <kbd>P</kbd> mains · <kbd>W</kbd> Wi-Fi · <kbd>C</kbd> compressor · <kbd>H</kbd> heat</p>
+            </section>
             <section class="panel">
               <header class="panel-head"><h3>Thermostat</h3><span class="tag mono" id="hw-state-tag">—</span></header>
               <div id="hw-fsm"></div>
             </section>
-            <section class="panel">
-              <header class="panel-head"><h3>Pin map</h3><span class="tag mono">ESP32 DevKit</span></header>
-              <div id="hw-pins"></div>
-            </section>
           </div>
         </div>
-        <section class="panel serial">
-          <header class="panel-head"><h3>Serial monitor <span class="muted mono">115200 baud</span></h3><button class="link-btn" id="serial-clear">clear</button></header>
-          <pre id="hw-serial" class="serial-out" aria-live="off"></pre>
-        </section>
+        <div class="two-col">
+          <section class="panel">
+            <header class="panel-head"><h3>Pin map</h3><span class="tag mono">ESP32 DevKit</span></header>
+            <div id="hw-pins"></div>
+          </section>
+          <section class="panel serial">
+            <header class="panel-head"><h3>Serial monitor <span class="muted mono">115200</span></h3><button class="link-btn" id="serial-clear">clear</button></header>
+            <pre id="hw-serial" class="serial-out" aria-live="off"></pre>
+          </section>
+        </div>
       </section>
 
       <!-- INVENTORY -->
@@ -288,13 +346,13 @@
       <section id="page-users" class="page-view hidden">
         <div class="two-col wide-left">
           <section class="panel">
-            <header class="panel-head"><h3>Accounts</h3></header>
+            <header class="panel-head"><h3>Accounts</h3><span class="tag" id="req-tag">no pending requests</span></header>
             <div id="user-list" class="table-wrap"></div>
           </section>
           <section class="panel">
             <header class="panel-head"><h3>New account</h3></header>
             <form id="user-form" class="stack-form">
-              <label for="nu-name">Username</label><input id="nu-name" required minlength="3" maxlength="40" autocomplete="off">
+              <label for="nu-name">Username or email</label><input id="nu-name" required minlength="3" maxlength="60" autocomplete="off">
               <label for="nu-pass">Password (8+ characters)</label><input id="nu-pass" type="password" required minlength="8" autocomplete="new-password">
               <label for="nu-role">Role</label>
               <select id="nu-role"><option>Pharmacist</option><option>Inspector</option><option>Admin</option></select>
@@ -305,9 +363,9 @@
               <tbody>
                 <tr><td>View dashboard, audit, integrity</td><td class="y">●</td><td class="y">●</td><td class="y">●</td></tr>
                 <tr><td>Add, edit, move batches</td><td class="y">●</td><td class="y">●</td><td>–</td></tr>
-                <tr><td>Confirm relocation</td><td class="y">●</td><td class="y">●</td><td>–</td></tr>
+                <tr><td>Operate simulated hardware</td><td class="y">●</td><td class="y">●</td><td>–</td></tr>
                 <tr><td>Reset discard latch</td><td class="y">●</td><td>–</td><td>–</td></tr>
-                <tr><td>Manage users</td><td class="y">●</td><td>–</td><td>–</td></tr>
+                <tr><td>Manage users, approve requests</td><td class="y">●</td><td>–</td><td>–</td></tr>
               </tbody>
             </table>
           </section>
